@@ -5,6 +5,9 @@
 - This is the ICTA Dashboard: a Next.js app with API routes and a PostgreSQL reporting database.
 - Keep the application deployable with Docker Compose and Caddy on the shared `caddy_net` network.
 - Follow the existing restrained dashboard design language: light paper background, compact sections, small-radius cards, tabular numerals, and ICTA-accented colors.
+- ICTA brand colors (from the logo): red #ED1C24 and black #101820 lead; green #00A651 is a small accent only; gray #6D6E6F for secondary. Do not build green-led surfaces. Chart palette lives in `lib/charts/motion.ts`.
+- Map widgets use `aspectScale: 1` (Kenya is on the equator; the ECharts default 0.75 squeezes it horizontally).
+- Copy style: plain sentences, no em-dashes.
 - Use eCharts for charting surfaces unless a user explicitly asks for another charting library.
 
 ## eCharts Animation Standard

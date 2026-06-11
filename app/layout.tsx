@@ -10,7 +10,7 @@ const sans = Inter({
 
 export const metadata: Metadata = {
   title: "ICTA Dashboard",
-  description: "ICT Authority executive dashboard shell."
+  description: "ICT Authority executive dashboard for the Digital & AI Skills Training Program."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

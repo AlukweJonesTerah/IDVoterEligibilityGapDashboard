@@ -38,10 +38,6 @@ export function PageShell({
               <div className="eyebrow mt-1">ICT Authority · Microsoft · Pathways Technologies</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 rounded border border-hair bg-paper px-3 py-1.5 text-xs font-medium text-subink">
-            <span className="h-2 w-2 rounded-full bg-icta-red pulse-dot" />
-            20 million Kenyans skilled by 2032
-          </div>
         </div>
         <nav className="mx-auto -mb-px flex max-w-7xl flex-wrap gap-1 px-5 sm:px-7 lg:px-10">
           {PAGES.map((p) => {

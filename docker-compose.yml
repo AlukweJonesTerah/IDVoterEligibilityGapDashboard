@@ -26,7 +26,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ICTA Dashboard}
-      DATABASE_URL: postgres://${POSTGRES_USER:-icta_dashboard}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-icta_dashboard}
+      DATABASE_URL: ${DATABASE_URL:?missing DATABASE_URL}
     depends_on:
       postgres:
         condition: service_healthy

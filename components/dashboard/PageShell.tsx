@@ -25,50 +25,58 @@ export function PageShell({
 }) {
   const pathname = usePathname();
   return (
-    <main className="min-h-screen px-5 py-5 sm:px-7 lg:px-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <header className="border-b border-hair pb-0">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-start gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icta-logo.png" alt="ICT Authority" className="mt-1 h-12 w-auto shrink-0" />
-              <div>
-                <div className="eyebrow">ICT Authority · Microsoft · Pathways Technologies</div>
-                <h1 className="mt-1 text-xl font-semibold text-ink md:text-2xl">{title}</h1>
-                {subtitle ? <p className="mt-1 max-w-3xl text-sm leading-6 text-subink">{subtitle}</p> : null}
+    <div className="min-h-screen">
+      <header className="border-b border-hair bg-paperalt shadow-paper">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 pb-3 pt-4 sm:px-7 lg:px-10">
+          <div className="flex items-center gap-5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icta-logo.png" alt="ICT Authority" className="h-16 w-auto" />
+            <div className="border-l border-hair pl-5">
+              <div className="text-[15px] font-semibold leading-5 tracking-tight text-ink">
+                National Digital & AI Skills Dashboard
               </div>
-            </div>
-            <div className="flex items-center gap-2 rounded border border-hair bg-paperalt px-3 py-1.5 text-xs font-medium text-subink shadow-paper">
-              <span className="h-2 w-2 rounded-full bg-icta-red pulse-dot" />
-              Digital & AI Skills Training Program
+              <div className="eyebrow mt-1">ICT Authority · Microsoft · Pathways Technologies</div>
             </div>
           </div>
-          <nav className="mt-4 flex flex-wrap gap-1 text-[13px]">
-            {PAGES.map((p) => {
-              const active = pathname === p.href;
-              return (
-                <Link
-                  key={p.href}
-                  href={p.href}
-                  className={`rounded-t border-x border-t px-3 py-1.5 ${
-                    active
-                      ? "border-hair bg-paperalt font-semibold text-icta-redDeep"
-                      : "border-transparent text-mute hover:text-ink"
-                  }`}
-                >
-                  {p.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </header>
+          <div className="flex items-center gap-2 rounded border border-hair bg-paper px-3 py-1.5 text-xs font-medium text-subink">
+            <span className="h-2 w-2 rounded-full bg-icta-red pulse-dot" />
+            20 million Kenyans skilled by 2032
+          </div>
+        </div>
+        <nav className="mx-auto -mb-px flex max-w-7xl flex-wrap gap-1 px-5 sm:px-7 lg:px-10">
+          {PAGES.map((p) => {
+            const active = pathname === p.href;
+            return (
+              <Link
+                key={p.href}
+                href={p.href}
+                className={`border-b-2 px-3 pb-2.5 pt-1.5 text-[13px] transition-colors ${
+                  active
+                    ? "border-icta-red font-semibold text-ink"
+                    : "border-transparent text-mute hover:border-hair hover:text-ink"
+                }`}
+              >
+                {p.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </header>
 
-        {children}
+      <main className="px-5 py-5 sm:px-7 lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5">
+          <div>
+            <h1 className="text-xl font-semibold text-ink md:text-2xl">{title}</h1>
+            {subtitle ? <p className="mt-1 max-w-3xl text-sm leading-6 text-subink">{subtitle}</p> : null}
+          </div>
 
-        <footer className="border-t border-hair pt-3 pb-2">
-          <ProvenanceLegend />
-        </footer>
-      </div>
-    </main>
+          {children}
+
+          <footer className="border-t border-hair pt-3 pb-2">
+            <ProvenanceLegend />
+          </footer>
+        </div>
+      </main>
+    </div>
   );
 }

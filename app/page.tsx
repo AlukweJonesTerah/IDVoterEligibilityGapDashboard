@@ -38,7 +38,7 @@ export default function ExecutiveOverview() {
             <Kpi
               label="Progress to 20M"
               value={fmtPct(w.headline.data.progressPct)}
-              sub={`of ${fmtCompact(w.headline.data.target)} target`}
+              sub={`${fmtCompact(w.headline.data.uniqueLearners)} of ${fmtCompact(w.headline.data.target)} learners`}
               provenance={w.headline.provenance}
             />
             <Kpi

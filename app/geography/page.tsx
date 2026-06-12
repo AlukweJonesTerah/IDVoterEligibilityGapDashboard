@@ -46,11 +46,12 @@ export default function GeographyPage() {
       subtitle="Where learners are being reached. Click a county on the map or table to drill into its regions; the selection applies on every page."
     >
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Counties reached" value={`${counties.length} / 47`} provenance={w.counties.provenance} />
-        <Kpi label="Top county" value={top10[0]?.county_label ?? "—"} sub={`${fmt(top10[0]?.learners)} learners`} provenance={w.counties.provenance} />
-        <Kpi label="Lowest county" value={bottom10[0]?.county_label ?? "—"} sub={`${fmt(bottom10[0]?.learners)} learners`} provenance={w.counties.provenance} />
+        <Kpi label="Counties reached" help="Counties with at least one learner in the current filter scope, out of Kenya's 47." value={`${counties.length} / 47`} provenance={w.counties.provenance} />
+        <Kpi label="Top county" help="County with the most unique learners in scope." value={top10[0]?.county_label ?? "—"} sub={`${fmt(top10[0]?.learners)} learners`} provenance={w.counties.provenance} />
+        <Kpi label="Lowest county" help="County with the fewest unique learners in scope." value={bottom10[0]?.county_label ?? "—"} sub={`${fmt(bottom10[0]?.learners)} learners`} provenance={w.counties.provenance} />
         <Kpi
           label="Best reach per capita"
+          help="County with the most learners per 100,000 residents (2019 census), which corrects for population size."
           value={[...counties].sort((a, b) => (b.per_100k ?? 0) - (a.per_100k ?? 0))[0]?.county_label ?? "—"}
           sub="learners per 100k population"
           provenance={w.counties.provenance}
@@ -60,6 +61,7 @@ export default function GeographyPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Widget
           title={selected ? `Regions in ${selected}` : "Learner reach map"}
+          help={selected ? "Unique learners by region within the selected county." : "Unique learners by county. Click a county to drill into its regions and filter every page."}
           provenance={w.counties.provenance}
           right={
             selected ? (
@@ -100,7 +102,7 @@ export default function GeographyPage() {
           )}
         </Widget>
 
-        <Widget title="County performance" provenance={w.counties.provenance}>
+        <Widget title="County performance" help="Reach, per-capita reach, completion and female participation for every county. Click a row to drill in." provenance={w.counties.provenance}>
           <div className="max-h-[460px] overflow-y-auto pr-3">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-paperalt text-mute">
@@ -135,10 +137,10 @@ export default function GeographyPage() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         {[
-          { title: "Top 10 counties", rows: top10, color: "#ED1C24" },
-          { title: "Bottom 10 counties", rows: bottom10, color: "#6D6E6F" }
+          { title: "Top 10 counties", rows: top10, color: "#ED1C24", help: "Counties with the most unique learners." },
+          { title: "Bottom 10 counties", rows: bottom10, color: "#6D6E6F", help: "Counties with the fewest unique learners, where reach needs the most attention." }
         ].map((cfg) => (
-          <Widget key={cfg.title} title={cfg.title} provenance={w.counties.provenance}>
+          <Widget key={cfg.title} title={cfg.title} help={cfg.help} provenance={w.counties.provenance}>
             <EChart
               height={280}
               option={rankedBarOption(

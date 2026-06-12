@@ -27,7 +27,7 @@ export function PageShell({
   return (
     <div className="min-h-screen">
       <header className="border-b border-hair bg-paperalt shadow-paper">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 pb-3 pt-4 sm:px-7 lg:px-10">
+        <div className="mx-auto flex max-w-[1560px] flex-wrap items-center justify-between gap-4 px-5 pb-3 pt-4 sm:px-7 lg:px-10">
           <div className="flex items-center gap-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icta-logo.png" alt="ICT Authority" className="h-16 w-auto" />
@@ -39,7 +39,7 @@ export function PageShell({
             </div>
           </div>
         </div>
-        <nav className="mx-auto -mb-px flex max-w-7xl flex-wrap gap-1 px-5 sm:px-7 lg:px-10">
+        <nav className="mx-auto -mb-px flex max-w-[1560px] flex-wrap gap-1 px-5 sm:px-7 lg:px-10">
           {PAGES.map((p) => {
             const active = pathname === p.href;
             return (
@@ -60,13 +60,13 @@ export function PageShell({
       </header>
 
       <div className="border-b border-hair bg-paperalt">
-        <div className="mx-auto max-w-7xl px-5 sm:px-7 lg:px-10">
+        <div className="mx-auto max-w-[1560px] px-5 sm:px-7 lg:px-10">
           <FilterBar />
         </div>
       </div>
 
       <main className="px-5 py-5 sm:px-7 lg:px-10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5">
+        <div className="mx-auto flex max-w-[1560px] flex-col gap-5">
           <div>
             <h1 className="text-xl font-semibold text-ink md:text-2xl">{title}</h1>
             {subtitle ? <p className="mt-1 max-w-3xl text-sm leading-6 text-subink">{subtitle}</p> : null}

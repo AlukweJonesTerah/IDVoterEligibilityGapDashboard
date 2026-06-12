@@ -49,28 +49,29 @@ export default function CoursesAndPipelinePage() {
     >
       {/* Summary cards */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Courses offered" value={String(courses.length)} provenance={c.courses.provenance} />
-        <Kpi label="Most popular" value={labelCase(top?.course)} sub={`${fmt(top?.enrolments)} enrolments`} provenance={c.courses.provenance} />
-        <Kpi label="Best completion" value={labelCase(bestCompletion?.course)} sub={fmtPct(bestCompletion?.completion_rate)} provenance={c.courses.provenance} />
+        <Kpi label="Courses offered" help="Number of distinct courses with enrolments in the current scope." value={String(courses.length)} provenance={c.courses.provenance} />
+        <Kpi label="Most popular" help="Course with the most enrolments." value={labelCase(top?.course)} sub={`${fmt(top?.enrolments)} enrolments`} provenance={c.courses.provenance} />
+        <Kpi label="Best completion" help="Course with the highest completion rate among started enrolments." value={labelCase(bestCompletion?.course)} sub={fmtPct(bestCompletion?.completion_rate)} provenance={c.courses.provenance} />
         <Kpi
           label="Categories"
+          help="Course categories on offer."
           value={String(c.categories.data.length)}
           sub={c.categories.data.map((x: { category: string }) => labelCase(x.category)).join(" · ")}
           provenance={c.categories.provenance}
         />
       </section>
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi compact label="Registered" value={fmt(p.funnel.data.registered)} provenance={p.funnel.provenance} />
-        <Kpi compact label="Enrolled" value={fmt(p.funnel.data.enrolled)} provenance={p.funnel.provenance} />
-        <Kpi compact label="Started" value={fmt(p.funnel.data.started)} provenance={p.funnel.provenance} />
-        <Kpi compact label="Completed" value={fmt(p.funnel.data.completed)} provenance={p.funnel.provenance} />
-        <Kpi compact label="Certification-ready" value={fmt(p.funnel.data.certification_ready)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Registered" help="Distinct learners registered in the programme." value={fmt(p.funnel.data.registered)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Enrolled" help="Course enrolments; one learner can enrol in several courses." value={fmt(p.funnel.data.enrolled)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Started" help="Enrolments where the learner has begun the course." value={fmt(p.funnel.data.started)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Completed" help="Enrolments completed end to end." value={fmt(p.funnel.data.completed)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Certification-ready" help="Completed enrolments that also meet the assessment threshold for certification." value={fmt(p.funnel.data.certification_ready)} provenance={p.funnel.provenance} />
       </section>
 
       <SectionTitle>Courses</SectionTitle>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <Widget title="Category mix" provenance={c.categories.provenance}>
+        <Widget title="Category mix" help="How enrolments split across the course categories." provenance={c.categories.provenance}>
           <EChart
             height={400}
             option={donutOption(
@@ -82,7 +83,7 @@ export default function CoursesAndPipelinePage() {
             )}
           />
         </Widget>
-        <Widget title="Course leaderboard (enrolments)" provenance={c.courses.provenance} className="lg:col-span-2">
+        <Widget title="Course leaderboard (enrolments)" help="Top 15 courses by enrolments. Hover a bar for the full course name." provenance={c.courses.provenance} className="lg:col-span-2">
           <EChart
             height={400}
             option={rankedBarOption(
@@ -97,7 +98,7 @@ export default function CoursesAndPipelinePage() {
       <SectionTitle>Training pipeline</SectionTitle>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Widget title="Learner journey funnel" provenance={p.funnel.provenance}>
+        <Widget title="Learner journey funnel" help="How learners move from registration through enrolment, starting, completing and reaching certification readiness." provenance={p.funnel.provenance}>
           <EChart
             height={320}
             option={{
@@ -129,7 +130,7 @@ export default function CoursesAndPipelinePage() {
           />
         </Widget>
 
-        <Widget title="Daily training activity" provenance={p.dailyActivity.provenance}>
+        <Widget title="Daily training activity" help="Training records per day; the dashed line is distinct learners that day." provenance={p.dailyActivity.provenance}>
           <EChart
             height={320}
             option={timeLineOption([
@@ -151,7 +152,7 @@ export default function CoursesAndPipelinePage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Widget title="Completions over time" provenance={p.completionTrend.provenance}>
+        <Widget title="Completions over time" help="Course completions per day." provenance={p.completionTrend.provenance}>
           <EChart
             height={300}
             option={timeLineOption([
@@ -165,7 +166,7 @@ export default function CoursesAndPipelinePage() {
           />
         </Widget>
 
-        <Widget title="Drop-off by county (not started)" provenance={p.dropoff.provenance}>
+        <Widget title="Drop-off by county (not started)" help="Share of enrolments where the learner never started, by county. High bars need follow-up." provenance={p.dropoff.provenance}>
           <EChart
             height={300}
             option={rankedBarOption(
@@ -179,7 +180,7 @@ export default function CoursesAndPipelinePage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Widget title="Cohort progress (synthetic structures)" provenance={p.cohorts.provenance}>
+        <Widget title="Cohort progress (synthetic structures)" help="Largest cohorts and their completion rates. Cohort structures are placeholders until the real cohort datasets load." provenance={p.cohorts.provenance}>
           <div className="max-h-[320px] overflow-y-auto pr-3">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-paperalt text-mute">
@@ -202,7 +203,7 @@ export default function CoursesAndPipelinePage() {
           </div>
         </Widget>
 
-        <Widget title="Course performance matrix" provenance={c.courses.provenance}>
+        <Widget title="Course performance matrix" help="Every course with its enrolments, learners, completion rate and average quiz score." provenance={c.courses.provenance}>
           <div className="max-h-[320px] overflow-y-auto pr-3">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-paperalt text-mute">

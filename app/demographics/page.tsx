@@ -20,16 +20,18 @@ export default function DemographicsPage() {
       ) : (
         <>
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi label="Female participation" value={fmtPct(w.kpis.data.female_rate)} provenance={w.kpis.provenance} />
-            <Kpi label="Youth (18-34)" value={fmtPct(w.kpis.data.youth_rate)} provenance={w.kpis.provenance} />
+            <Kpi label="Female participation" help="Share of learners who are female, of those with a known gender." value={fmtPct(w.kpis.data.female_rate)} provenance={w.kpis.provenance} />
+            <Kpi label="Youth (18-34)" help="Share of learners aged 18 to 34." value={fmtPct(w.kpis.data.youth_rate)} provenance={w.kpis.provenance} />
             <Kpi
               label="Persons with disability"
+              help="Learners who report living with a disability, and their share of all learners."
               value={fmt(w.kpis.data.pwd_learners)}
               sub={`${w.kpis.data.pwd_rate ?? "—"}% of learners`}
               provenance={w.kpis.provenance}
             />
             <Kpi
               label="Device access"
+              help="Share of learners with access to a smartphone, tablet or computer; internet shows regular internet access."
               value={fmtPct(w.kpis.data.device_rate)}
               sub={`internet: ${w.kpis.data.internet_rate ?? "—"}%`}
               provenance={w.kpis.provenance}
@@ -37,7 +39,7 @@ export default function DemographicsPage() {
           </section>
 
           <section className="grid gap-4 lg:grid-cols-3">
-            <Widget title="Gender distribution" provenance={w.gender.provenance}>
+            <Widget title="Gender distribution" help="Learners by gender." provenance={w.gender.provenance}>
               <EChart
                 height={260}
                 option={donutOption(
@@ -49,7 +51,7 @@ export default function DemographicsPage() {
                 )}
               />
             </Widget>
-            <Widget title="Age groups" provenance={w.age.provenance}>
+            <Widget title="Age groups" help="Learners by age band." provenance={w.age.provenance}>
               <EChart
                 height={260}
                 option={{
@@ -69,7 +71,7 @@ export default function DemographicsPage() {
                 }}
               />
             </Widget>
-            <Widget title="Disability profile" provenance={w.disability.provenance}>
+            <Widget title="Disability profile" help="Learners who report a disability, broken down by type." provenance={w.disability.provenance}>
               <EChart
                 height={260}
                 option={rankedBarOption(
@@ -86,7 +88,7 @@ export default function DemographicsPage() {
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <Widget title="Education level at intake" provenance={w.education.provenance}>
+            <Widget title="Education level at intake" help="Highest education level learners had when they joined the programme." provenance={w.education.provenance}>
               <EChart
                 height={280}
                 option={rankedBarOption(
@@ -96,7 +98,7 @@ export default function DemographicsPage() {
                 )}
               />
             </Widget>
-            <Widget title="Employment status at intake" provenance={w.employment.provenance}>
+            <Widget title="Employment status at intake" help="Learners' employment situation when they joined the programme." provenance={w.employment.provenance}>
               <EChart
                 height={280}
                 option={rankedBarOption(

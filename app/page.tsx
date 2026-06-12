@@ -26,30 +26,35 @@ export default function ExecutiveOverview() {
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <Kpi
               label="Unique learners"
+              help="Distinct individuals trained, counted once no matter how many courses they take. This is the official figure tracked against the 20 million target."
               value={fmt(w.headline.data.uniqueLearners)}
               sub="distinct individuals, counted once"
               provenance={w.headline.provenance}
             />
             <Kpi
               label="Total trainings / enrolments"
+              help="Every course participation record. One learner taking five courses counts five times here."
               value={fmt(w.headline.data.enrolments)}
               sub="all course participation records"
               provenance={w.headline.provenance}
             />
             <Kpi
               label="Progress to 20M"
+              help="Unique learners as a share of the national target of 20 million Kenyans skilled by 2032."
               value={fmtPct(w.headline.data.progressPct)}
               sub={`${fmtCompact(w.headline.data.uniqueLearners)} of ${fmtCompact(w.headline.data.target)} learners`}
               provenance={w.headline.provenance}
             />
             <Kpi
               label="Counties reached"
+              help="Counties with at least one learner in the current filter scope, out of Kenya's 47."
               value={`${w.headline.data.counties} / 47`}
               sub="counties in current scope"
               provenance={w.headline.provenance}
             />
             <Kpi
               label="Completion rate"
+              help="Share of started course enrolments that were completed."
               value={fmtPct(w.completion.data.completion_rate)}
               sub="completed of started"
               provenance={w.completion.provenance}
@@ -58,15 +63,15 @@ export default function ExecutiveOverview() {
 
           {/* Row 2: inclusion highlights */}
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi compact label="Female participation" value={fmtPct(w.inclusion.data.female_rate)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Youth (18-34)" value={fmtPct(w.inclusion.data.youth_rate)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Persons with disability" value={fmt(w.inclusion.data.pwd_learners)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Device access" value={fmtPct(w.inclusion.data.device_rate)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Female participation" help="Share of learners who are female, of those with a known gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Youth (18-34)" help="Share of learners aged 18 to 34." value={fmtPct(w.inclusion.data.youth_rate)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Persons with disability" help="Learners who report living with a disability." value={fmt(w.inclusion.data.pwd_learners)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Device access" help="Share of learners with access to a smartphone, tablet or computer." value={fmtPct(w.inclusion.data.device_rate)} provenance={w.inclusion.provenance} />
           </section>
 
           {/* Main visual area: map + demographic highlights */}
           <section className="grid gap-4 lg:grid-cols-3">
-            <Widget title="Reach by county" provenance={w.countyMap.provenance}>
+            <Widget title="Reach by county" help="Unique learners by county. Darker red means more learners. Click a county to filter the whole dashboard to it." provenance={w.countyMap.provenance}>
               <KenyaMap
                 height={380}
                 label="Learners"
@@ -78,7 +83,7 @@ export default function ExecutiveOverview() {
               />
               <p className="mt-1 text-[11px] text-mute">Click a county to filter every page to it.</p>
             </Widget>
-            <Widget title="Age groups" provenance={w.age.provenance}>
+            <Widget title="Age groups" help="Learners by age band, showing how young the learner base is." provenance={w.age.provenance}>
               <EChart
                 height={380}
                 option={{
@@ -98,7 +103,7 @@ export default function ExecutiveOverview() {
                 }}
               />
             </Widget>
-            <Widget title="Disability profile" provenance={w.disability.provenance}>
+            <Widget title="Disability profile" help="Learners who report a disability, broken down by type." provenance={w.disability.provenance}>
               <EChart
                 height={380}
                 option={rankedBarOption(
@@ -112,7 +117,7 @@ export default function ExecutiveOverview() {
 
           {/* Lower summary area */}
           <section className="grid gap-4 lg:grid-cols-4">
-            <Widget title="Top 5 counties" provenance={w.countyMap.provenance}>
+            <Widget title="Top 5 counties" help="Counties with the most unique learners. The full ranking is on the Geographic Coverage tab." provenance={w.countyMap.provenance}>
               <EChart
                 height={230}
                 option={rankedBarOption(
@@ -122,7 +127,7 @@ export default function ExecutiveOverview() {
                 )}
               />
             </Widget>
-            <Widget title="Bottom 5 counties" provenance={w.countyMap.provenance}>
+            <Widget title="Bottom 5 counties" help="Counties with the fewest unique learners, where reach needs the most attention." provenance={w.countyMap.provenance}>
               <EChart
                 height={230}
                 option={rankedBarOption(
@@ -132,7 +137,7 @@ export default function ExecutiveOverview() {
                 )}
               />
             </Widget>
-            <Widget title="Course categories" provenance={w.categories.provenance}>
+            <Widget title="Course categories" help="How enrolments split across the course categories." provenance={w.categories.provenance}>
               <EChart
                 height={230}
                 option={donutOption(
@@ -144,7 +149,7 @@ export default function ExecutiveOverview() {
                 )}
               />
             </Widget>
-            <Widget title="Gender split" provenance={w.genderSplit.provenance}>
+            <Widget title="Gender split" help="Learners by gender." provenance={w.genderSplit.provenance}>
               <EChart
                 height={230}
                 option={donutOption(

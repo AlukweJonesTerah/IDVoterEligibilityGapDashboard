@@ -33,22 +33,29 @@ export function donutOption(
   rows: { name: string; value: number }[],
   colors: string[]
 ): Record<string, unknown> {
+  const total = rows.reduce((s, r) => s + r.value, 0) || 1;
+  const pct = Object.fromEntries(rows.map((r) => [r.name, Math.round((100 * r.value) / total)]));
   return {
     ...chartMotion,
     color: colors,
     tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
-    legend: { bottom: 0, icon: "circle", itemWidth: 10, textStyle: { fontSize: 11.5, color: "#3A4856" } },
+    legend: {
+      bottom: 0,
+      left: "center",
+      icon: "circle",
+      itemWidth: 10,
+      itemHeight: 10,
+      formatter: (name: string) => `${name} · ${pct[name]}%`,
+      textStyle: { fontSize: 11.5, color: "#3A4856" }
+    },
     series: [
       {
         type: "pie",
-        radius: ["48%", "72%"],
-        center: ["50%", "44%"],
-        label: {
-          formatter: (p: { percent: number }) => `${Math.round(p.percent)}%`,
-          fontSize: 11.5,
-          color: "#3A4856"
-        },
-        labelLine: { length: 8, length2: 6 },
+        radius: ["46%", "70%"],
+        center: ["50%", "40%"],
+        // No external labels: they collided with the legend in narrow cards.
+        // Percentages live in the legend and the tooltip instead.
+        label: { show: false },
         data: rows
       }
     ]

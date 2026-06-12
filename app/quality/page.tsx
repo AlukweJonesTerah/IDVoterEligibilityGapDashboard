@@ -30,24 +30,26 @@ export default function QualityPage() {
       ) : (
         <>
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Kpi label="Data quality score" value={`${w.metrics.data.quality_score} / 100`} provenance={w.metrics.provenance} />
-            <Kpi label="Total records" value={fmt(w.metrics.data.total_rows)} provenance={w.metrics.provenance} />
-            <Kpi label="Unique learners" value={fmt(w.metrics.data.unique_learners)} provenance={w.metrics.provenance} />
+            <Kpi label="Data quality score" help="Composite score from completeness, duplicate rate and field validity of the loaded data. Higher is better." value={`${w.metrics.data.quality_score} / 100`} provenance={w.metrics.provenance} />
+            <Kpi label="Total records" help="All rows ingested into the training table." value={fmt(w.metrics.data.total_rows)} provenance={w.metrics.provenance} />
+            <Kpi label="Unique learners" help="Distinct learner IDs after deduplication." value={fmt(w.metrics.data.unique_learners)} provenance={w.metrics.provenance} />
             <Kpi
               label="Duplicate learner IDs"
+              help="Learner IDs that appear on more than one record. These are deduplicated before any learner count is reported."
               value={fmt(w.metrics.data.duplicate_ids)}
               sub={`${fmt(w.metrics.data.duplicate_ids)} duplicate IDs across ${fmt(w.metrics.data.rows_on_duplicate_ids)} rows (${w.metrics.data.duplicate_rate}%)`}
               provenance={w.metrics.provenance}
             />
             <Kpi
               label="Missing fields"
+              help="Records missing a county or learner ID. These are excluded from county-level views but counted nationally."
               value={`${fmt(w.metrics.data.missing_county)} · ${fmt(w.metrics.data.missing_id)}`}
               sub={`Missing county: ${fmt(w.metrics.data.missing_county)} · Missing ID: ${fmt(w.metrics.data.missing_id)}`}
               provenance={w.metrics.provenance}
             />
           </section>
 
-          <Widget title="Dataset registry: the source of truth for every widget" provenance={w.registry.provenance}>
+          <Widget title="Dataset registry: the source of truth for every widget" help="Which source datasets are loaded (actual), modeled as placeholders (sample), or still missing. Every provenance dot on the dashboard traces back to this table." provenance={w.registry.provenance}>
             <table className="w-full text-left text-[12px]">
               <thead className="text-mute">
                 <tr className="border-b border-hair">
@@ -87,6 +89,7 @@ export default function QualityPage() {
 
           <Widget
             title="Placeholder-like fields in the loaded table"
+            help="Columns whose values never vary, which suggests placeholder data rather than real source values."
             provenance={w.placeholders.provenance}
           >
             <table className="w-full max-w-2xl text-left text-[12px]">

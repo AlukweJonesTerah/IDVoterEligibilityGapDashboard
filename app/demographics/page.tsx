@@ -2,10 +2,11 @@
 
 import { PageShell } from "@/components/dashboard/PageShell";
 import { Widget, Kpi } from "@/components/dashboard/Widget";
+import { UnavailableNote } from "@/components/dashboard/Provenance";
 import { EChart } from "@/components/charts/EChart";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
 import { chartMotion, axisStyle, donutOption, rankedBarOption } from "@/lib/charts/motion";
-import { fmt, fmtPct, labelCase } from "@/lib/format";
+import { fmt, fmtCompact, fmtPct, labelCase } from "@/lib/format";
 
 export default function DemographicsPage() {
   const { widgets: w, error } = useDashboardData("/api/demographics");
@@ -13,33 +14,45 @@ export default function DemographicsPage() {
   return (
     <PageShell
       title="Demographics & Inclusion"
-      subtitle="Participation by gender, age, disability, education and employment. Splits are modeled estimates over real learner counts until Datasets 2 and 7 are loaded."
+      subtitle="Participation by gender, age, disability and education, from the live records that carry demographic data. Coverage is partial; hover any dot for the honest denominator."
     >
       {!w ? (
         <LoadingBlock error={error} />
       ) : (
         <>
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi label="Female participation" help="Share of learners who are female, of those with a known gender." value={fmtPct(w.kpis.data.female_rate)} provenance={w.kpis.provenance} />
-            <Kpi label="Youth (18-34)" help="Share of learners aged 18 to 34." value={fmtPct(w.kpis.data.youth_rate)} provenance={w.kpis.provenance} />
+            <Kpi
+              label="Female participation"
+              help="Share female among pooled records with a known gender."
+              value={fmtPct(w.kpis.data.female_rate)}
+              sub={`of ${fmtCompact(w.kpis.data.gender_known)} records with gender`}
+              provenance={w.kpis.provenance}
+            />
+            <Kpi
+              label="Youth (18-34)"
+              help="Share aged 18 to 34 among pooled records with a known age group."
+              value={fmtPct(w.kpis.data.youth_rate)}
+              sub={`of ${fmtCompact(w.kpis.data.age_known)} records with age`}
+              provenance={w.kpis.provenance}
+            />
             <Kpi
               label="Persons with disability"
-              help="Learners who report living with a disability, and their share of all learners."
+              help="Pooled records reporting a disability, of those with a disability response."
               value={fmt(w.kpis.data.pwd_learners)}
-              sub={`${w.kpis.data.pwd_rate ?? "—"}% of learners`}
+              sub={`of ${fmtCompact(w.kpis.data.disability_known)} with a response`}
               provenance={w.kpis.provenance}
             />
             <Kpi
               label="Device access"
-              help="Share of learners with access to a smartphone, tablet or computer; internet shows regular internet access."
+              help="Device availability is recorded only for the Busia pilot records; not a national measure."
               value={fmtPct(w.kpis.data.device_rate)}
-              sub={`internet: ${w.kpis.data.internet_rate ?? "—"}%`}
+              sub={`Busia pilot, ${fmtCompact(w.kpis.data.device_known)} records`}
               provenance={w.kpis.provenance}
             />
           </section>
 
           <section className="grid gap-4 lg:grid-cols-3">
-            <Widget title="Gender distribution" help="Learners by gender." provenance={w.gender.provenance}>
+            <Widget title="Gender distribution" help="Pooled records with a known gender." provenance={w.gender.provenance}>
               <EChart
                 height={260}
                 option={donutOption(
@@ -47,11 +60,11 @@ export default function DemographicsPage() {
                     name: labelCase(d.label),
                     value: d.learners
                   })),
-                  ["#101820", "#ED1C24", "#6D6E6F"]
+                  ["#ED1C24", "#101820", "#6D6E6F"]
                 )}
               />
             </Widget>
-            <Widget title="Age groups" help="Learners by age band." provenance={w.age.provenance}>
+            <Widget title="Age groups" help="Pooled records by age band." provenance={w.age.provenance}>
               <EChart
                 height={260}
                 option={{
@@ -71,24 +84,30 @@ export default function DemographicsPage() {
                 }}
               />
             </Widget>
-            <Widget title="Disability profile" help="Learners who report a disability, broken down by type." provenance={w.disability.provenance}>
+            <Widget
+              title="Disability inclusion"
+              help="Pooled records with a disability response: reported disability versus none."
+              provenance={w.disability.provenance}
+            >
               <EChart
                 height={260}
-                option={rankedBarOption(
-                  w.disability.data
-                    .filter((d: { label: string }) => d.label !== "NO DISABILITY")
-                    .map((d: { label: string }) => labelCase(d.label)),
-                  w.disability.data
-                    .filter((d: { label: string }) => d.label !== "NO DISABILITY")
-                    .map((d: { learners: number }) => d.learners),
-                  "#9A6E20"
+                option={donutOption(
+                  w.disability.data.map((d: { label: string; learners: number }) => ({
+                    name: labelCase(d.label),
+                    value: d.learners
+                  })),
+                  ["#6D6E6F", "#9A6E20"]
                 )}
               />
             </Widget>
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-2">
-            <Widget title="Education level at intake" help="Highest education level learners had when they joined the programme." provenance={w.education.provenance}>
+          <section className="grid gap-4 lg:grid-cols-3">
+            <Widget
+              title="Education level"
+              help="Highest education level where recorded (Busia and county cohort sources)."
+              provenance={w.education.provenance}
+            >
               <EChart
                 height={280}
                 option={rankedBarOption(
@@ -98,15 +117,28 @@ export default function DemographicsPage() {
                 )}
               />
             </Widget>
-            <Widget title="Employment status at intake" help="Learners' employment situation when they joined the programme." provenance={w.employment.provenance}>
+            <Widget
+              title="Device availability (Busia pilot)"
+              help="Device availability from the Busia pilot records only; not a national measure."
+              provenance={w.device.provenance}
+            >
               <EChart
                 height={280}
-                option={rankedBarOption(
-                  w.employment.data.map((d: { label: string }) => labelCase(d.label)),
-                  w.employment.data.map((d: { learners: number }) => d.learners),
-                  "#5E6B7A"
+                option={donutOption(
+                  w.device.data.map((d: { label: string; learners: number }) => ({
+                    name: labelCase(d.label),
+                    value: d.learners
+                  })),
+                  ["#101820", "#B0B5BC"]
                 )}
               />
+            </Widget>
+            <Widget
+              title="Employment status"
+              help="Employment status comes from the learner baseline dataset."
+              provenance={w.employment.provenance}
+            >
+              <UnavailableNote reason="The learner baseline dataset exists in the live database but has no rows yet. Employment, income and impact measures will appear when it is populated." />
             </Widget>
           </section>
         </>

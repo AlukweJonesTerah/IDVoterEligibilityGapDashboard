@@ -54,19 +54,19 @@ export default function ExecutiveOverview() {
             />
             <Kpi
               label="Completion rate"
-              help="Share of started course enrolments that were completed."
-              value={fmtPct(w.completion.data.completion_rate)}
-              sub="completed of started"
+              help="A national completion rate cannot be computed yet: only a small pilot slice of actual completion records is loaded. No modeled estimate is shown."
+              value="Not yet measured"
+              sub={`${fmt(w.completion.data.records)} actual completion records loaded`}
               provenance={w.completion.provenance}
             />
           </section>
 
           {/* Row 2: inclusion highlights */}
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi compact label="Female participation" help="Share of learners who are female, of those with a known gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Youth (18-34)" help="Share of learners aged 18 to 34." value={fmtPct(w.inclusion.data.youth_rate)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Persons with disability" help="Learners who report living with a disability." value={fmt(w.inclusion.data.pwd_learners)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Device access" help="Share of learners with access to a smartphone, tablet or computer." value={fmtPct(w.inclusion.data.device_rate)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Female participation" help="Share female among pooled records with a known gender. This pool is smaller than the full learner base; hover the dot for coverage." value={fmtPct(w.inclusion.data.female_rate)} sub={`of ${fmtCompact(w.inclusion.data.gender_known)} records with gender`} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group." value={fmtPct(w.inclusion.data.youth_rate)} sub={`of ${fmtCompact(w.inclusion.data.age_known)} records with age`} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response." value={fmt(w.inclusion.data.pwd_learners)} sub={`of ${fmtCompact(w.inclusion.data.disability_known)} with a response`} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Device access" help="Device availability is recorded only for the Busia pilot records; this is not a national measure." value={fmtPct(w.inclusion.data.device_rate)} sub={`Busia pilot, ${fmtCompact(w.inclusion.data.device_known)} records`} provenance={w.inclusion.provenance} />
           </section>
 
           {/* Main visual area: map + demographic highlights */}
@@ -83,7 +83,7 @@ export default function ExecutiveOverview() {
               />
               <p className="mt-1 text-[11px] text-mute">Click a county to filter every page to it.</p>
             </Widget>
-            <Widget title="Age groups" help="Learners by age band, showing how young the learner base is." provenance={w.age.provenance}>
+            <Widget title="Age groups" help="Pooled records by age band. Covers the records with demographic data, not the full learner base." provenance={w.age.provenance}>
               <EChart
                 height={380}
                 option={{
@@ -103,7 +103,7 @@ export default function ExecutiveOverview() {
                 }}
               />
             </Widget>
-            <Widget title="Disability profile" help="Learners who report a disability, broken down by type." provenance={w.disability.provenance}>
+            <Widget title="Disability inclusion" help="Pooled records with a disability response: reported disability versus none." provenance={w.disability.provenance}>
               <EChart
                 height={380}
                 option={rankedBarOption(
@@ -149,7 +149,7 @@ export default function ExecutiveOverview() {
                 )}
               />
             </Widget>
-            <Widget title="Gender split" help="Learners by gender." provenance={w.genderSplit.provenance}>
+            <Widget title="Gender split" help="Pooled records with a known gender." provenance={w.genderSplit.provenance}>
               <EChart
                 height={230}
                 option={donutOption(

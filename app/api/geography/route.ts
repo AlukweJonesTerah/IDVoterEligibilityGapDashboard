@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   // The county map and table always show all counties in scope; the global
-  // county filter drives the drilldown instead of collapsing the page to one
-  // row, so it is not applied to the per-county aggregates here.
+  // county filter drives the drilldown instead of collapsing the page.
   const params = filterValues({ ...filters, county: null });
   const drillCounty = req.nextUrl.searchParams.get("county") || filters.county;
 
@@ -21,27 +20,11 @@ export async function GET(req: NextRequest) {
               count(DISTINCT t.unique_id)::int AS learners,
               count(*)::int AS enrolments,
               c.population_2019::int AS population,
-              round(100000.0 * count(DISTINCT t.unique_id) / c.population_2019, 1)::float AS per_100k,
-              o.completion_rate,
-              a.female_rate, a.pwd_learners
+              round(100000.0 * count(DISTINCT t.unique_id) / c.population_2019, 1)::float AS per_100k
        FROM analytics.icta_training_data t
        LEFT JOIN ref.counties c ON ref.norm_county(c.county_name) = ref.norm_county(t.county)
-       LEFT JOIN LATERAL (
-         SELECT round(100.0 * count(*) FILTER (WHERE e.status = 'COMPLETED') /
-                NULLIF(count(*) FILTER (WHERE e.status IN ('IN PROGRESS','COMPLETED')), 0), 1)::float AS completion_rate
-         FROM sample.enrolment_outcomes e
-         WHERE e.county = t.county
-           AND ($2::text IS NULL OR e.course_category = $2::text)
-           AND ($3::date IS NULL OR e.date_trained >= $3::date)
-           AND ($4::date IS NULL OR e.date_trained <= $4::date)
-       ) o ON true
-       LEFT JOIN LATERAL (
-         SELECT round(100.0 * count(*) FILTER (WHERE la.gender = 'FEMALE') / NULLIF(count(*), 0), 1)::float AS female_rate,
-                count(*) FILTER (WHERE la.has_disability)::int AS pwd_learners
-         FROM sample.learner_attributes la WHERE la.county = t.county
-       ) a ON true
        WHERE ${filterSql("t")}
-       GROUP BY t.county, c.county_name, c.population_2019, o.completion_rate, a.female_rate, a.pwd_learners
+       GROUP BY t.county, c.county_name, c.population_2019
        ORDER BY learners DESC`,
       params
     ),
@@ -60,8 +43,8 @@ export async function GET(req: NextRequest) {
     widgets: {
       counties: {
         data: byCounty.rows,
-        provenance: provenanceFor(registry, ["training_records", "completion", "baseline"], {
-          note: "Learner counts and per-capita reach are actual; completion and inclusion columns are modeled."
+        provenance: provenanceFor(registry, ["training_records"], {
+          note: "Learner counts and per-capita reach come from actual live training records. Completion and demographic columns are omitted until source coverage exists."
         })
       },
       ...(regionDrill

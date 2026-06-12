@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -9,43 +10,29 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const params = filterValues(readFilters(req));
 
-  const [funnel, byCohort, dropoffByCounty, completionTrend, dailyActivity] = await Promise.all([
+  const [stages, completion, completionTrend, cohorts, dailyActivity] = await Promise.all([
     db.query(
-      `SELECT count(DISTINCT e.unique_id)::int AS registered,
-              count(*)::int AS enrolled,
-              count(*) FILTER (WHERE e.status IN ('IN PROGRESS','COMPLETED'))::int AS started,
-              count(*) FILTER (WHERE e.status = 'COMPLETED')::int AS completed,
-              count(*) FILTER (WHERE e.certification_ready)::int AS certification_ready
-       FROM sample.enrolment_outcomes e WHERE ${filterSql("e")}`,
+      `SELECT count(DISTINCT t.unique_id)::int AS registered,
+              count(*)::int AS enrolled
+       FROM analytics.icta_training_data t WHERE ${filterSql("t")}`,
       params
     ),
-    db.query(
-      `SELECT c.cohort, count(DISTINCT c.unique_id)::int AS learners,
-              round(100.0 * count(*) FILTER (WHERE e.status = 'COMPLETED') /
-                NULLIF(count(*) FILTER (WHERE e.status IN ('IN PROGRESS','COMPLETED')), 0), 1)::float AS completion_rate
-       FROM sample.cohort_assignments c
-       JOIN sample.enrolment_outcomes e USING (unique_id)
-       WHERE ${filterSql("e")}
-       GROUP BY c.cohort ORDER BY learners DESC LIMIT 15`,
-      params
-    ),
-    db.query(
-      `SELECT coalesce(c.county_name, initcap(e.county)) AS county,
-              round(100.0 * count(*) FILTER (WHERE e.status = 'NOT STARTED') / NULLIF(count(*), 0), 1)::float AS dropoff_rate,
-              count(*)::int AS enrolments
-       FROM sample.enrolment_outcomes e
-       LEFT JOIN ref.counties c ON ref.norm_county(c.county_name) = ref.norm_county(e.county)
-       WHERE ${filterSql("e")}
-       GROUP BY 1 HAVING count(*) > 100 ORDER BY dropoff_rate DESC LIMIT 12`,
-      params
-    ),
-    db.query(
-      `SELECT e.completion_date::text AS day, count(*)::int AS completions
-       FROM sample.enrolment_outcomes e
-       WHERE e.completion_date IS NOT NULL AND ${filterSql("e")}
-       GROUP BY 1 ORDER BY 1`,
-      params
-    ),
+    db.query(`
+      SELECT count(*)::int AS records,
+             round(avg(quiz_average), 1)::float AS avg_quiz,
+             count(*) FILTER (WHERE percent_complete >= 100)::int AS completed,
+             min(completion_date)::text AS first_date,
+             max(completion_date)::text AS last_date
+      FROM staging.completion_records`),
+    db.query(`
+      SELECT completion_date::text AS day, count(*)::int AS completions
+      FROM staging.completion_records WHERE completion_date IS NOT NULL
+      GROUP BY 1 ORDER BY 1`),
+    db.query(`
+      SELECT cohort, count(*)::int AS learners,
+             count(gender)::int AS gender_known
+      FROM staging.demographic_persons WHERE cohort IS NOT NULL
+      GROUP BY 1 ORDER BY learners DESC LIMIT 15`),
     db.query(
       `SELECT t.date_trained::text AS day, count(*)::int AS enrolments,
               count(DISTINCT t.unique_id)::int AS learners
@@ -55,31 +42,44 @@ export async function GET(req: NextRequest) {
     )
   ]);
 
-  const modeled = (note: string) =>
-    provenanceFor(registry, ["training_records", "completion"], { totalsReal: false, note });
+  const comp = completion.rows[0];
 
   return NextResponse.json({
     widgets: {
       funnel: {
-        data: funnel.rows[0],
+        data: {
+          registered: stages.rows[0].registered,
+          enrolled: stages.rows[0].enrolled,
+          completion_records: comp.records
+        },
         provenance: provenanceFor(registry, ["training_records", "completion"], {
-          note: "Registered and enrolled are actual; started, completed and certified stages are modeled pending Dataset 3."
+          status: "partial",
+          coverage: `Registered and enrolled are actual; only ${fmt(comp.records)} actual completion records exist.`,
+          note: "Started, completed and certified stages cannot be computed nationally from current source data."
         })
       },
-      cohorts: {
-        data: byCohort.rows,
-        provenance: provenanceFor(registry, ["county_cohort", "completion"], {
-          totalsReal: false,
-          note: "Cohort structures are synthetic placeholders with systematic names, pending Datasets 5 and 6."
+      completionSummary: {
+        data: comp,
+        provenance: provenanceFor(registry, ["completion"], {
+          status: "partial",
+          coverage: `${fmt(comp.records)} actual completion records loaded; not representative of national completion.`,
+          note: "Pilot-slice data from the completion source."
         })
-      },
-      dropoff: {
-        data: dropoffByCounty.rows,
-        provenance: modeled("Drop-off rates are modeled pending Dataset 3.")
       },
       completionTrend: {
         data: completionTrend.rows,
-        provenance: modeled("Completion dates are modeled pending Dataset 3.")
+        provenance: provenanceFor(registry, ["completion"], {
+          status: "partial",
+          coverage: `${fmt(comp.records)} actual completion records.`,
+          note: "Pilot-slice completions only; not a national trend."
+        })
+      },
+      cohorts: {
+        data: cohorts.rows,
+        provenance: provenanceFor(registry, ["county_cohort", "busia_cohort"], {
+          status: "partial",
+          note: "Real cohort assignments from the cohort sources; covers a partial record pool, not all learners. Completion per cohort is not yet in the source data."
+        })
       },
       dailyActivity: {
         data: dailyActivity.rows,

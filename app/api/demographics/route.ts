@@ -1,52 +1,112 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
-import { readFilters, filterValues, learnerScopeSql } from "@/lib/filters-server";
+import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const MODELED_NOTE =
-  "Demographic splits are modeled estimates over real learner counts, pending Datasets 2 and 7.";
+const POOL_KEYS = ["county_cohort", "disability_supplement", "contacts", "busia_cohort"];
+const POOL_NOTE =
+  "From the pool of live records with demographic data. Global filters do not apply to this pool; it is not the full 101k learner base.";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const registry = await getRegistry();
-  const params = filterValues(readFilters(req));
-  const scoped = (select: string, extra = "") =>
-    db.query(
-      `SELECT ${select} FROM sample.learner_attributes a WHERE ${learnerScopeSql("a")} ${extra}`,
-      params
-    );
 
-  const [gender, age, disability, education, employment, kpis] = await Promise.all([
-    scoped("a.gender AS label, count(*)::int AS learners", "GROUP BY 1 ORDER BY 2 DESC"),
-    scoped("a.age_band AS label, count(*)::int AS learners", "GROUP BY 1 ORDER BY 1"),
-    scoped(
-      "coalesce(a.disability_type, 'NO DISABILITY') AS label, count(*)::int AS learners",
-      "GROUP BY 1 ORDER BY 2 DESC"
-    ),
-    scoped("a.education_level AS label, count(*)::int AS learners", "GROUP BY 1 ORDER BY 2 DESC"),
-    scoped("a.employment_status AS label, count(*)::int AS learners", "GROUP BY 1 ORDER BY 2 DESC"),
-    scoped(`
-      round(100.0 * count(*) FILTER (WHERE a.gender = 'FEMALE') / NULLIF(count(*), 0), 1)::float AS female_rate,
-      round(100.0 * count(*) FILTER (WHERE a.age_band IN ('18-24','25-34')) / NULLIF(count(*), 0), 1)::float AS youth_rate,
-      round(100.0 * count(*) FILTER (WHERE a.has_disability) / NULLIF(count(*), 0), 2)::float AS pwd_rate,
-      count(*) FILTER (WHERE a.has_disability)::int AS pwd_learners,
-      round(100.0 * count(*) FILTER (WHERE a.has_device_access) / NULLIF(count(*), 0), 1)::float AS device_rate,
-      round(100.0 * count(*) FILTER (WHERE a.has_regular_internet) / NULLIF(count(*), 0), 1)::float AS internet_rate,
-      round(100.0 * count(*) FILTER (WHERE a.education_level IN ('NO FORMAL EDUCATION','PRIMARY')) / NULLIF(count(*), 0), 1)::float AS low_education_rate`)
+  const [kpis, gender, age, disability, education, device] = await Promise.all([
+    db.query(`
+      SELECT count(*)::int AS persons,
+             count(gender)::int AS gender_known,
+             count(*) FILTER (WHERE gender = 'FEMALE')::int AS female,
+             count(age_group)::int AS age_known,
+             count(*) FILTER (WHERE (regexp_match(age_group, '(\\d+)'))[1]::int BETWEEN 15 AND 34)::int AS youth,
+             count(has_disability)::int AS disability_known,
+             count(*) FILTER (WHERE has_disability)::int AS pwd,
+             count(has_device)::int AS device_known,
+             count(*) FILTER (WHERE has_device)::int AS with_device,
+             count(education_level)::int AS education_known
+      FROM staging.demographic_persons`),
+    db.query(`
+      SELECT gender AS label, count(*)::int AS learners
+      FROM staging.demographic_persons WHERE gender IS NOT NULL
+      GROUP BY 1 ORDER BY 2 DESC`),
+    db.query(`
+      SELECT age_group AS label, count(*)::int AS learners
+      FROM staging.demographic_persons WHERE age_group IS NOT NULL
+      GROUP BY 1 ORDER BY 1`),
+    db.query(`
+      SELECT CASE WHEN has_disability THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
+             count(*)::int AS learners
+      FROM staging.demographic_persons WHERE has_disability IS NOT NULL
+      GROUP BY 1 ORDER BY 2 DESC`),
+    db.query(`
+      SELECT education_level AS label, count(*)::int AS learners
+      FROM staging.demographic_persons WHERE education_level IS NOT NULL
+      GROUP BY 1 ORDER BY 2 DESC`),
+    db.query(`
+      SELECT CASE WHEN has_device THEN 'HAS DEVICE' ELSE 'NO DEVICE' END AS label,
+             count(*)::int AS learners
+      FROM staging.demographic_persons WHERE has_device IS NOT NULL
+      GROUP BY 1 ORDER BY 2 DESC`)
   ]);
 
-  const blended = (note = MODELED_NOTE) =>
-    provenanceFor(registry, ["training_records", "baseline"], { note });
+  const k = kpis.rows[0];
+  const pct = (a: number, b: number) => (b > 0 ? Number(((100 * a) / b).toFixed(1)) : null);
+  const partial = (coverage: string) =>
+    provenanceFor(registry, POOL_KEYS, { status: "partial", coverage, note: POOL_NOTE });
 
   return NextResponse.json({
     widgets: {
-      kpis: { data: kpis.rows[0], provenance: blended() },
-      gender: { data: gender.rows, provenance: blended() },
-      age: { data: age.rows, provenance: blended() },
-      disability: { data: disability.rows, provenance: blended() },
-      education: { data: education.rows, provenance: blended() },
-      employment: { data: employment.rows, provenance: blended() }
+      kpis: {
+        data: {
+          female_rate: pct(k.female, k.gender_known),
+          youth_rate: pct(k.youth, k.age_known),
+          pwd_learners: k.pwd,
+          pwd_rate: pct(k.pwd, k.disability_known),
+          device_rate: pct(k.with_device, k.device_known),
+          persons: k.persons,
+          gender_known: k.gender_known,
+          age_known: k.age_known,
+          disability_known: k.disability_known,
+          device_known: k.device_known,
+          education_known: k.education_known
+        },
+        provenance: partial(
+          `Pool of ${fmt(k.persons)} deduplicated records: gender ${fmt(k.gender_known)}, age ${fmt(k.age_known)}, disability response ${fmt(k.disability_known)}, education ${fmt(k.education_known)}, device ${fmt(k.device_known)} (Busia pilot).`
+        )
+      },
+      gender: {
+        data: gender.rows,
+        provenance: partial(`Gender known for ${fmt(k.gender_known)} of ${fmt(k.persons)} pooled records.`)
+      },
+      age: {
+        data: age.rows,
+        provenance: partial(`Age group known for ${fmt(k.age_known)} of ${fmt(k.persons)} pooled records.`)
+      },
+      disability: {
+        data: disability.rows,
+        provenance: partial(
+          `Disability response recorded for ${fmt(k.disability_known)} of ${fmt(k.persons)} pooled records.`
+        )
+      },
+      education: {
+        data: education.rows,
+        provenance: partial(
+          `Education level known for ${fmt(k.education_known)} of ${fmt(k.persons)} pooled records (Busia and county cohort sources).`
+        )
+      },
+      device: {
+        data: device.rows,
+        provenance: partial(
+          `Device data exists for ${fmt(k.device_known)} records from the Busia pilot only; not a national measure.`
+        )
+      },
+      employment: {
+        data: [],
+        provenance: provenanceFor(registry, ["baseline"], {
+          status: "unavailable",
+          note: "Employment status comes from the learner baseline dataset, which has no rows yet."
+        })
+      }
     }
   });
 }

@@ -33,7 +33,8 @@ export async function GET() {
       FROM analytics.icta_training_data`),
     db.query(`
       SELECT dataset_key, display_name, expected_table, active_source,
-             loaded_at::text, row_count, notes
+             loaded_at::text, row_count, notes,
+             coverage_count, coverage_denominator, coverage_note
       FROM app.dataset_registry
       ORDER BY CASE dataset_key
         WHEN 'training_records' THEN 0

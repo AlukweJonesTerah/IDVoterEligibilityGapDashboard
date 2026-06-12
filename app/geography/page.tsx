@@ -7,7 +7,7 @@ import { KenyaMap } from "@/components/charts/KenyaMap";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
 import { useFilters } from "@/components/dashboard/FilterContext";
 import { rankedBarOption } from "@/lib/charts/motion";
-import { fmt, fmtPct, labelCase } from "@/lib/format";
+import { fmt, labelCase } from "@/lib/format";
 
 interface CountyRow {
   county: string;
@@ -16,9 +16,6 @@ interface CountyRow {
   enrolments: number;
   population: number | null;
   per_100k: number | null;
-  completion_rate: number | null;
-  female_rate: number | null;
-  pwd_learners: number | null;
 }
 
 export default function GeographyPage() {
@@ -82,10 +79,7 @@ export default function GeographyPage() {
               data={counties.map((d) => ({
                 name: d.county_label,
                 value: d.learners,
-                extra: {
-                  "Per 100k": d.per_100k,
-                  "Completion (modeled)": d.completion_rate != null ? `${d.completion_rate}%` : null
-                }
+                extra: { "Per 100k": d.per_100k, Enrolments: d.enrolments }
               }))}
             />
           ) : regions == null ? (
@@ -102,16 +96,15 @@ export default function GeographyPage() {
           )}
         </Widget>
 
-        <Widget title="County performance" help="Reach, per-capita reach, completion and female participation for every county. Click a row to drill in." provenance={w.counties.provenance}>
+        <Widget title="County performance" help="Actual learners, enrolments and per-capita reach for every county. Click a row to drill in." provenance={w.counties.provenance}>
           <div className="max-h-[460px] overflow-y-auto pr-3">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-paperalt text-mute">
                 <tr className="border-b border-hair">
                   <th className="py-1.5 pr-2 font-medium">County</th>
                   <th className="py-1.5 pr-2 text-right font-medium">Learners</th>
-                  <th className="py-1.5 pr-2 text-right font-medium">Per 100k</th>
-                  <th className="py-1.5 pr-2 text-right font-medium">Completion*</th>
-                  <th className="py-1.5 text-right font-medium">Female*</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">Enrolments</th>
+                  <th className="py-1.5 text-right font-medium">Per 100k</th>
                 </tr>
               </thead>
               <tbody className="tnum">
@@ -123,14 +116,12 @@ export default function GeographyPage() {
                   >
                     <td className="py-1.5 pr-2 text-ink">{d.county_label}</td>
                     <td className="py-1.5 pr-2 text-right">{fmt(d.learners)}</td>
-                    <td className="py-1.5 pr-2 text-right">{d.per_100k ?? "—"}</td>
-                    <td className="py-1.5 pr-2 text-right">{fmtPct(d.completion_rate)}</td>
-                    <td className="py-1.5 text-right">{fmtPct(d.female_rate)}</td>
+                    <td className="py-1.5 pr-2 text-right">{fmt(d.enrolments)}</td>
+                    <td className="py-1.5 text-right">{d.per_100k ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-[11px] text-mute">* modeled estimate pending source datasets</p>
           </div>
         </Widget>
       </section>

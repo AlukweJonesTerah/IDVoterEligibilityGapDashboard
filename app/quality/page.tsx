@@ -7,14 +7,16 @@ import { fmt } from "@/lib/format";
 
 const SOURCE_BADGE: Record<string, string> = {
   actual: "bg-icta-greenSoft text-icta-greenDeep",
+  partial: "bg-[#F5EBD8] text-signal-gold",
   sample: "bg-[#F5EBD8] text-signal-gold",
   none: "bg-hair2 text-mute"
 };
 
 const SOURCE_LABEL: Record<string, string> = {
   actual: "loaded (actual)",
+  partial: "partial actual",
   sample: "modeled (sample)",
-  none: "not loaded"
+  none: "not available"
 };
 
 export default function QualityPage() {
@@ -57,6 +59,7 @@ export default function QualityPage() {
                   <th className="py-1.5 pr-2 font-medium">Expected table</th>
                   <th className="py-1.5 pr-2 font-medium">Status</th>
                   <th className="py-1.5 pr-2 text-right font-medium">Rows</th>
+                  <th className="py-1.5 pr-2 font-medium">Coverage</th>
                   <th className="py-1.5 font-medium">Notes</th>
                 </tr>
               </thead>
@@ -69,6 +72,9 @@ export default function QualityPage() {
                     active_source: string;
                     row_count: number | null;
                     notes: string | null;
+                    coverage_count: number | null;
+                    coverage_denominator: number | null;
+                    coverage_note: string | null;
                   }) => (
                     <tr key={r.dataset_key} className="border-b border-hair2 align-top">
                       <td className="py-2 pr-2 font-medium text-ink">{r.display_name}</td>
@@ -79,6 +85,14 @@ export default function QualityPage() {
                         </span>
                       </td>
                       <td className="tnum py-2 pr-2 text-right">{r.row_count ? fmt(r.row_count) : "—"}</td>
+                      <td className="py-2 pr-2 text-[11px] leading-4 text-subink">
+                        {r.coverage_count != null && r.coverage_denominator ? (
+                          <span className="tnum">
+                            {fmt(r.coverage_count)} / {fmt(r.coverage_denominator)}
+                          </span>
+                        ) : ("—")}
+                        {r.coverage_note ? <span className="block text-mute">{r.coverage_note}</span> : null}
+                      </td>
                       <td className="py-2 text-[11px] leading-4 text-mute">{r.notes}</td>
                     </tr>
                   )

@@ -28,8 +28,11 @@ const files = [
   "db/init/001_init.sql",
   "db/init/002_ref_sample_registry.sql",
   "db/init/003_ref_counties.sql",
+  "db/init/004_registry_coverage.sql",
   ...(withSample ? ["db/sample/001_generate_sample_lane.sql"] : [])
 ];
+// For the live reporting layer (staging.* tables fed from the live source DB
+// with PII stripped at source), run scripts/live-refresh.sh instead.
 
 for (const f of files) {
   process.stdout.write(`  ${f} ... `);

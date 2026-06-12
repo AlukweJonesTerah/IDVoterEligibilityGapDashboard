@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -9,25 +10,14 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const params = filterValues(readFilters(req));
 
-  const [courses, categories] = await Promise.all([
+  const [courses, categories, registrations] = await Promise.all([
     db.query(
       `SELECT t.course_taken AS course, t.course_category AS category,
               count(*)::int AS enrolments,
-              count(DISTINCT t.unique_id)::int AS learners,
-              o.completion_rate, o.avg_quiz
+              count(DISTINCT t.unique_id)::int AS learners
        FROM analytics.icta_training_data t
-       LEFT JOIN LATERAL (
-         SELECT round(100.0 * count(*) FILTER (WHERE e.status = 'COMPLETED') /
-                NULLIF(count(*) FILTER (WHERE e.status IN ('IN PROGRESS','COMPLETED')), 0), 1)::float AS completion_rate,
-                round(avg(e.quiz_average), 1)::float AS avg_quiz
-         FROM sample.enrolment_outcomes e
-         WHERE e.course_taken = t.course_taken
-           AND ($1::text IS NULL OR ref.norm_county(e.county) = ref.norm_county($1::text))
-           AND ($3::date IS NULL OR e.date_trained >= $3::date)
-           AND ($4::date IS NULL OR e.date_trained <= $4::date)
-       ) o ON true
        WHERE ${filterSql("t")}
-       GROUP BY t.course_taken, t.course_category, o.completion_rate, o.avg_quiz
+       GROUP BY t.course_taken, t.course_category
        ORDER BY enrolments DESC`,
       params
     ),
@@ -37,20 +27,35 @@ export async function GET(req: NextRequest) {
        FROM analytics.icta_training_data t WHERE ${filterSql("t")}
        GROUP BY 1 ORDER BY 2 DESC`,
       params
-    )
+    ),
+    db.query(`
+      SELECT count(*)::int AS total,
+             count(gender)::int AS gender_known,
+             count(DISTINCT course)::int AS courses
+      FROM staging.registrations`)
   ]);
+
+  const reg = registrations.rows[0];
 
   return NextResponse.json({
     widgets: {
       courses: {
         data: courses.rows,
-        provenance: provenanceFor(registry, ["training_records", "completion"], {
-          note: "Enrolments and learners per course are actual; completion rate and quiz averages are modeled."
+        provenance: provenanceFor(registry, ["training_records"], {
+          note: "Enrolments and learners per course come from actual live training records. Per-course completion and quiz figures are not yet in the source data."
         })
       },
       categories: {
         data: categories.rows,
         provenance: provenanceFor(registry, ["training_records"])
+      },
+      registrations: {
+        data: reg,
+        provenance: provenanceFor(registry, ["registration"], {
+          status: "partial",
+          coverage: `${fmt(reg.total)} registration records across ${reg.courses} course labels; gender present on ${fmt(reg.gender_known)}.`,
+          note: "Intake measure from the registration source. There is no shared learner key to the training table, so this is never added to trained-learner counts."
+        })
       }
     }
   });

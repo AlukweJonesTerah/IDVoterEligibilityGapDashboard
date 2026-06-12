@@ -64,10 +64,11 @@ export function KenyaMap({
       max,
       left: 0,
       bottom: 0,
-      itemWidth: 10,
-      itemHeight: 80,
+      orient: "horizontal",
+      itemWidth: 9,
+      itemHeight: 70,
       text: ["High", "Low"],
-      textStyle: { color: "#6B7787", fontSize: 10 },
+      textStyle: { color: "#6B7787", fontSize: 11 },
       inRange: { color: ["#FDEDEB", "#ED1C24", "#8E1014"] }
     },
     series: [
@@ -77,6 +78,9 @@ export function KenyaMap({
         // Kenya straddles the equator; the ECharts default aspectScale of 0.75
         // compresses it horizontally.
         aspectScale: 1,
+        // Fill the card deliberately instead of leaving whitespace (QA 7.3.19).
+        layoutCenter: ["50%", "50%"],
+        layoutSize: "92%",
         roam: false,
         selectedMode: false,
         label: { show: false },

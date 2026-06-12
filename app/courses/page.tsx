@@ -4,8 +4,14 @@ import { PageShell } from "@/components/dashboard/PageShell";
 import { Widget, Kpi } from "@/components/dashboard/Widget";
 import { EChart } from "@/components/charts/EChart";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
-import { chartMotion, rankedBarMotion, chartPalette, axisStyle } from "@/lib/charts/motion";
-import { fmt, fmtPct } from "@/lib/format";
+import {
+  chartMotion,
+  chartPalette,
+  donutOption,
+  rankedBarOption,
+  timeLineOption
+} from "@/lib/charts/motion";
+import { fmt, fmtPct, labelCase } from "@/lib/format";
 
 interface CourseRow {
   course: string;
@@ -16,127 +22,214 @@ interface CourseRow {
   avg_quiz: number | null;
 }
 
-const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+function SectionTitle({ children }: { children: string }) {
+  return <h2 className="eyebrow border-b border-hair pb-1.5 text-[12px]">{children}</h2>;
+}
 
-export default function CoursesPage() {
-  const { widgets: w, error } = useDashboardData("/api/courses");
+export default function CoursesAndPipelinePage() {
+  const { widgets: c, error: cError } = useDashboardData("/api/courses");
+  const { widgets: p, error: pError } = useDashboardData("/api/pipeline");
 
-  if (!w) {
+  if (!c || !p) {
     return (
-      <PageShell title="Course Performance">
-        <LoadingBlock error={error} />
+      <PageShell title="Courses & Pipeline">
+        <LoadingBlock error={cError ?? pError} />
       </PageShell>
     );
   }
 
-  const courses: CourseRow[] = w.courses.data;
+  const courses: CourseRow[] = c.courses.data;
   const top = courses[0];
   const bestCompletion = [...courses].sort((a, b) => (b.completion_rate ?? 0) - (a.completion_rate ?? 0))[0];
 
   return (
     <PageShell
-      title="Course Performance"
-      subtitle="What learners are taking and finishing. Enrolments are actual; completion and quiz figures are modeled pending the assessment dataset."
+      title="Course Performance & Training Pipeline"
+      subtitle="What learners take and finish, and how they move from registration to certification readiness."
     >
+      {/* Summary cards */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Courses offered" value={String(courses.length)} provenance={w.courses.provenance} />
-        <Kpi label="Most popular" value={top?.course ?? "—"} sub={`${fmt(top?.enrolments)} enrolments`} provenance={w.courses.provenance} />
-        <Kpi
-          label="Best completion"
-          value={bestCompletion?.course ?? "—"}
-          sub={fmtPct(bestCompletion?.completion_rate)}
-          provenance={w.courses.provenance}
-        />
+        <Kpi label="Courses offered" value={String(courses.length)} provenance={c.courses.provenance} />
+        <Kpi label="Most popular" value={labelCase(top?.course)} sub={`${fmt(top?.enrolments)} enrolments`} provenance={c.courses.provenance} />
+        <Kpi label="Best completion" value={labelCase(bestCompletion?.course)} sub={fmtPct(bestCompletion?.completion_rate)} provenance={c.courses.provenance} />
         <Kpi
           label="Categories"
-          value={String(w.categories.data.length)}
-          sub={w.categories.data.map((c: { category: string }) => toTitle(c.category)).join(" · ")}
-          provenance={w.categories.provenance}
+          value={String(c.categories.data.length)}
+          sub={c.categories.data.map((x: { category: string }) => labelCase(x.category)).join(" · ")}
+          provenance={c.categories.provenance}
         />
       </section>
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Kpi compact label="Registered" value={fmt(p.funnel.data.registered)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Enrolled" value={fmt(p.funnel.data.enrolled)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Started" value={fmt(p.funnel.data.started)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Completed" value={fmt(p.funnel.data.completed)} provenance={p.funnel.provenance} />
+        <Kpi compact label="Certification-ready" value={fmt(p.funnel.data.certification_ready)} provenance={p.funnel.provenance} />
+      </section>
+
+      <SectionTitle>Courses</SectionTitle>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <Widget title="Course leaderboard (enrolments)" provenance={w.courses.provenance} className="lg:col-span-2">
+        <Widget title="Category mix" provenance={c.categories.provenance}>
           <EChart
-            height={420}
-            option={{
-              ...rankedBarMotion,
-              grid: { left: 220, right: 40, top: 8, bottom: 24 },
-              tooltip: { trigger: "axis" },
-              xAxis: { type: "value", ...axisStyle },
-              yAxis: {
-                type: "category",
-                inverse: true,
-                data: courses.slice(0, 15).map((c) => c.course),
-                ...axisStyle,
-                axisLabel: { ...axisStyle.axisLabel, fontSize: 10.5 }
-              },
-              series: [
-                {
-                  type: "bar",
-                  barWidth: 12,
-                  itemStyle: { color: "#ED1C24", borderRadius: [0, 2, 2, 0] },
-                  data: courses.slice(0, 15).map((c) => c.enrolments)
-                }
-              ]
-            }}
+            height={400}
+            option={donutOption(
+              c.categories.data.map((d: { category: string; enrolments: number }) => ({
+                name: labelCase(d.category),
+                value: d.enrolments
+              })),
+              chartPalette
+            )}
           />
         </Widget>
-
-        <Widget title="Category mix" provenance={w.categories.provenance}>
+        <Widget title="Course leaderboard (enrolments)" provenance={c.courses.provenance} className="lg:col-span-2">
           <EChart
-            height={420}
-            option={{
-              ...chartMotion,
-              tooltip: { trigger: "item" },
-              color: chartPalette,
-              legend: { bottom: 0, textStyle: { fontSize: 10.5, color: "#3A4856" } },
-              series: [
-                {
-                  type: "pie",
-                  radius: ["40%", "65%"],
-                  center: ["50%", "45%"],
-                  label: { fontSize: 11, color: "#3A4856", formatter: "{d}%" },
-                  data: w.categories.data.map((d: { category: string; enrolments: number }) => ({
-                    name: toTitle(d.category),
-                    value: d.enrolments
-                  }))
-                }
-              ]
-            }}
+            height={400}
+            option={rankedBarOption(
+              courses.slice(0, 15).map((x) => labelCase(x.course)),
+              courses.slice(0, 15).map((x) => x.enrolments),
+              "#ED1C24"
+            )}
           />
         </Widget>
       </section>
 
-      <Widget title="Course performance matrix" provenance={w.courses.provenance}>
-        <div className="max-h-[420px] overflow-y-auto">
-          <table className="w-full text-left text-[12px]">
-            <thead className="sticky top-0 bg-paperalt text-mute">
-              <tr className="border-b border-hair">
-                <th className="py-1.5 pr-2 font-medium">Course</th>
-                <th className="py-1.5 pr-2 font-medium">Category</th>
-                <th className="py-1.5 pr-2 text-right font-medium">Enrolments</th>
-                <th className="py-1.5 pr-2 text-right font-medium">Learners</th>
-                <th className="py-1.5 pr-2 text-right font-medium">Completion*</th>
-                <th className="py-1.5 text-right font-medium">Avg quiz*</th>
-              </tr>
-            </thead>
-            <tbody className="tnum">
-              {courses.map((c) => (
-                <tr key={c.course} className="border-b border-hair2">
-                  <td className="py-1.5 pr-2 text-ink">{c.course}</td>
-                  <td className="py-1.5 pr-2 text-mute">{toTitle(c.category)}</td>
-                  <td className="py-1.5 pr-2 text-right">{fmt(c.enrolments)}</td>
-                  <td className="py-1.5 pr-2 text-right">{fmt(c.learners)}</td>
-                  <td className="py-1.5 pr-2 text-right">{fmtPct(c.completion_rate)}</td>
-                  <td className="py-1.5 text-right">{c.avg_quiz ?? "—"}</td>
+      <SectionTitle>Training pipeline</SectionTitle>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Widget title="Learner journey funnel" provenance={p.funnel.provenance}>
+          <EChart
+            height={320}
+            option={{
+              ...chartMotion,
+              tooltip: { trigger: "item", formatter: "{b}: {c}" },
+              series: [
+                {
+                  type: "funnel",
+                  sort: "none",
+                  left: "4%",
+                  width: "92%",
+                  top: 10,
+                  bottom: 10,
+                  minSize: "24%",
+                  gap: 3,
+                  label: { position: "inside", fontSize: 11.5, color: "#FFFFFF", formatter: "{b}" },
+                  itemStyle: { borderWidth: 0 },
+                  color: ["#101820", "#ED1C24", "#6D6E6F", "#00A651", "#8A9099"],
+                  data: [
+                    { name: "Registered", value: p.funnel.data.registered },
+                    { name: "Enrolled", value: p.funnel.data.enrolled },
+                    { name: "Started", value: p.funnel.data.started },
+                    { name: "Completed", value: p.funnel.data.completed },
+                    { name: "Certification-ready", value: p.funnel.data.certification_ready }
+                  ]
+                }
+              ]
+            }}
+          />
+        </Widget>
+
+        <Widget title="Daily training activity" provenance={p.dailyActivity.provenance}>
+          <EChart
+            height={320}
+            option={timeLineOption([
+              {
+                name: "Enrolments",
+                color: "#ED1C24",
+                area: true,
+                points: p.dailyActivity.data.map((d: { day: string; enrolments: number }) => [d.day, d.enrolments])
+              },
+              {
+                name: "Unique learners",
+                color: "#101820",
+                dashed: true,
+                points: p.dailyActivity.data.map((d: { day: string; learners: number }) => [d.day, d.learners])
+              }
+            ])}
+          />
+        </Widget>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Widget title="Completions over time" provenance={p.completionTrend.provenance}>
+          <EChart
+            height={300}
+            option={timeLineOption([
+              {
+                name: "Completions",
+                color: "#9A6E20",
+                area: true,
+                points: p.completionTrend.data.map((d: { day: string; completions: number }) => [d.day, d.completions])
+              }
+            ])}
+          />
+        </Widget>
+
+        <Widget title="Drop-off by county (not started)" provenance={p.dropoff.provenance}>
+          <EChart
+            height={300}
+            option={rankedBarOption(
+              p.dropoff.data.map((d: { county: string }) => d.county),
+              p.dropoff.data.map((d: { dropoff_rate: number }) => d.dropoff_rate),
+              "#3A4856",
+              { pct: true }
+            )}
+          />
+        </Widget>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Widget title="Cohort progress (synthetic structures)" provenance={p.cohorts.provenance}>
+          <div className="max-h-[320px] overflow-y-auto pr-3">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-paperalt text-mute">
+                <tr className="border-b border-hair">
+                  <th className="py-1.5 pr-2 font-medium">Cohort</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">Learners</th>
+                  <th className="py-1.5 text-right font-medium">Completion</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="mt-2 text-[10.5px] text-mute">* modeled estimate pending the course completion dataset</p>
-        </div>
-      </Widget>
+              </thead>
+              <tbody className="tnum">
+                {p.cohorts.data.map((x: { cohort: string; learners: number; completion_rate: number }) => (
+                  <tr key={x.cohort} className="border-b border-hair2">
+                    <td className="py-1.5 pr-2 text-ink">{labelCase(x.cohort)}</td>
+                    <td className="py-1.5 pr-2 text-right">{fmt(x.learners)}</td>
+                    <td className="py-1.5 text-right">{fmtPct(x.completion_rate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Widget>
+
+        <Widget title="Course performance matrix" provenance={c.courses.provenance}>
+          <div className="max-h-[320px] overflow-y-auto pr-3">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-paperalt text-mute">
+                <tr className="border-b border-hair">
+                  <th className="py-1.5 pr-2 font-medium">Course</th>
+                  <th className="py-1.5 pr-2 font-medium">Category</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">Enrolments</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">Completion*</th>
+                  <th className="py-1.5 text-right font-medium">Avg quiz*</th>
+                </tr>
+              </thead>
+              <tbody className="tnum">
+                {courses.map((x) => (
+                  <tr key={x.course} className="border-b border-hair2">
+                    <td className="py-1.5 pr-2 text-ink">{labelCase(x.course)}</td>
+                    <td className="py-1.5 pr-2 text-mute">{labelCase(x.category)}</td>
+                    <td className="py-1.5 pr-2 text-right">{fmt(x.enrolments)}</td>
+                    <td className="py-1.5 pr-2 text-right">{fmtPct(x.completion_rate)}</td>
+                    <td className="py-1.5 text-right">{x.avg_quiz ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[11px] text-mute">* modeled estimate pending the course completion dataset</p>
+          </div>
+        </Widget>
+      </section>
     </PageShell>
   );
 }

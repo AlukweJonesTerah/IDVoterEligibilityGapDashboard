@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ProvenanceLegend } from "./Provenance";
+import { FilterBar } from "./FilterBar";
 
 const PAGES = [
   { href: "/", label: "Executive Overview" },
   { href: "/geography", label: "Geographic Coverage" },
   { href: "/demographics", label: "Demographics & Inclusion" },
-  { href: "/pipeline", label: "Training Pipeline" },
-  { href: "/courses", label: "Course Performance" },
+  { href: "/courses", label: "Courses & Pipeline" },
   { href: "/quality", label: "Data Quality" }
 ];
 
@@ -58,6 +58,12 @@ export function PageShell({
           })}
         </nav>
       </header>
+
+      <div className="border-b border-hair bg-paperalt">
+        <div className="mx-auto max-w-7xl px-5 sm:px-7 lg:px-10">
+          <FilterBar />
+        </div>
+      </div>
 
       <main className="px-5 py-5 sm:px-7 lg:px-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-5">

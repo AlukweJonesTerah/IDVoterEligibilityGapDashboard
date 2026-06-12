@@ -35,7 +35,16 @@ export async function GET() {
       SELECT dataset_key, display_name, expected_table, active_source,
              loaded_at::text, row_count, notes
       FROM app.dataset_registry
-      ORDER BY CASE active_source WHEN 'actual' THEN 0 WHEN 'sample' THEN 1 ELSE 2 END, dataset_key`)
+      ORDER BY CASE dataset_key
+        WHEN 'training_records' THEN 0
+        WHEN 'registration' THEN 1
+        WHEN 'baseline' THEN 2
+        WHEN 'completion' THEN 3
+        WHEN 'contacts' THEN 4
+        WHEN 'busia_cohort' THEN 5
+        WHEN 'county_cohort' THEN 6
+        WHEN 'disability_supplement' THEN 7
+        ELSE 8 END`)
   ]);
 
   const m = metrics.rows[0];

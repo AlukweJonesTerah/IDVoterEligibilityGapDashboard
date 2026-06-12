@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { PageShell } from "@/components/dashboard/PageShell";
 import { Widget, Kpi } from "@/components/dashboard/Widget";
 import { EChart } from "@/components/charts/EChart";
 import { KenyaMap } from "@/components/charts/KenyaMap";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
-import { rankedBarMotion, axisStyle } from "@/lib/charts/motion";
-import { fmt, fmtPct } from "@/lib/format";
+import { useFilters } from "@/components/dashboard/FilterContext";
+import { rankedBarOption } from "@/lib/charts/motion";
+import { fmt, fmtPct, labelCase } from "@/lib/format";
 
 interface CountyRow {
   county: string;
@@ -23,15 +23,8 @@ interface CountyRow {
 
 export default function GeographyPage() {
   const { widgets: w, error } = useDashboardData("/api/geography");
-  const [selected, setSelected] = useState<string | null>(null);
-  const [regions, setRegions] = useState<{ region: string; learners: number; enrolments: number }[] | null>(null);
-
-  useEffect(() => {
-    if (!selected) return setRegions(null);
-    fetch(`/api/geography?county=${encodeURIComponent(selected)}`)
-      .then((r) => r.json())
-      .then((json) => setRegions(json.widgets.regions?.data ?? []));
-  }, [selected]);
+  const { filters, setFilters } = useFilters();
+  const selected = filters.county;
 
   if (!w) {
     return (
@@ -44,21 +37,18 @@ export default function GeographyPage() {
   const counties: CountyRow[] = w.counties.data;
   const top10 = counties.slice(0, 10);
   const bottom10 = [...counties].slice(-10).reverse();
+  const regions: { region: string; learners: number; enrolments: number }[] | null =
+    w.regions?.data ?? null;
 
   return (
     <PageShell
       title="Geographic Coverage"
-      subtitle="Where learners are being reached. Click a county on the map to drill into its regions."
+      subtitle="Where learners are being reached. Click a county on the map or table to drill into its regions; the selection applies on every page."
     >
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Counties reached" value={`${counties.length} / 47`} provenance={w.counties.provenance} />
         <Kpi label="Top county" value={top10[0]?.county_label ?? "—"} sub={`${fmt(top10[0]?.learners)} learners`} provenance={w.counties.provenance} />
-        <Kpi
-          label="Lowest county"
-          value={bottom10[0]?.county_label ?? "—"}
-          sub={`${fmt(bottom10[0]?.learners)} learners`}
-          provenance={w.counties.provenance}
-        />
+        <Kpi label="Lowest county" value={bottom10[0]?.county_label ?? "—"} sub={`${fmt(bottom10[0]?.learners)} learners`} provenance={w.counties.provenance} />
         <Kpi
           label="Best reach per capita"
           value={[...counties].sort((a, b) => (b.per_100k ?? 0) - (a.per_100k ?? 0))[0]?.county_label ?? "—"}
@@ -73,7 +63,10 @@ export default function GeographyPage() {
           provenance={w.counties.provenance}
           right={
             selected ? (
-              <button onClick={() => setSelected(null)} className="rounded border border-hair px-2 py-1 text-xs text-subink hover:bg-hair2">
+              <button
+                onClick={() => setFilters({ county: null })}
+                className="rounded border border-hair px-2 py-1 text-xs text-subink hover:bg-hair2"
+              >
                 ← back to national
               </button>
             ) : null
@@ -83,7 +76,7 @@ export default function GeographyPage() {
             <KenyaMap
               height={460}
               label="Learners"
-              onCountyClick={(c) => setSelected(c)}
+              onCountyClick={(county) => setFilters({ county })}
               data={counties.map((d) => ({
                 name: d.county_label,
                 value: d.learners,
@@ -98,28 +91,18 @@ export default function GeographyPage() {
           ) : (
             <EChart
               height={460}
-              option={{
-                ...rankedBarMotion,
-                grid: { left: 130, right: 30, top: 8, bottom: 24 },
-                tooltip: { trigger: "axis" },
-                xAxis: { type: "value", ...axisStyle },
-                yAxis: { type: "category", inverse: true, data: regions.map((r) => r.region), ...axisStyle },
-                series: [
-                  {
-                    type: "bar",
-                    barWidth: 12,
-                    itemStyle: { color: "#101820", borderRadius: [0, 2, 2, 0] },
-                    data: regions.map((r) => r.learners)
-                  }
-                ]
-              }}
+              option={rankedBarOption(
+                regions.map((r) => labelCase(r.region)),
+                regions.map((r) => r.learners),
+                "#101820"
+              )}
             />
           )}
         </Widget>
 
         <Widget title="County performance" provenance={w.counties.provenance}>
-          <div className="max-h-[460px] overflow-y-auto">
-            <table className="w-full text-left text-[12px]">
+          <div className="max-h-[460px] overflow-y-auto pr-3">
+            <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-paperalt text-mute">
                 <tr className="border-b border-hair">
                   <th className="py-1.5 pr-2 font-medium">County</th>
@@ -130,22 +113,22 @@ export default function GeographyPage() {
                 </tr>
               </thead>
               <tbody className="tnum">
-                {counties.map((c) => (
+                {counties.map((d) => (
                   <tr
-                    key={c.county}
+                    key={d.county}
                     className="cursor-pointer border-b border-hair2 hover:bg-hair2"
-                    onClick={() => setSelected(c.county_label)}
+                    onClick={() => setFilters({ county: d.county_label })}
                   >
-                    <td className="py-1.5 pr-2 text-ink">{c.county_label}</td>
-                    <td className="py-1.5 pr-2 text-right">{fmt(c.learners)}</td>
-                    <td className="py-1.5 pr-2 text-right">{c.per_100k ?? "—"}</td>
-                    <td className="py-1.5 pr-2 text-right">{fmtPct(c.completion_rate)}</td>
-                    <td className="py-1.5 text-right">{fmtPct(c.female_rate)}</td>
+                    <td className="py-1.5 pr-2 text-ink">{d.county_label}</td>
+                    <td className="py-1.5 pr-2 text-right">{fmt(d.learners)}</td>
+                    <td className="py-1.5 pr-2 text-right">{d.per_100k ?? "—"}</td>
+                    <td className="py-1.5 pr-2 text-right">{fmtPct(d.completion_rate)}</td>
+                    <td className="py-1.5 text-right">{fmtPct(d.female_rate)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-[10.5px] text-mute">* modeled estimate pending source datasets</p>
+            <p className="mt-2 text-[11px] text-mute">* modeled estimate pending source datasets</p>
           </div>
         </Widget>
       </section>
@@ -157,22 +140,12 @@ export default function GeographyPage() {
         ].map((cfg) => (
           <Widget key={cfg.title} title={cfg.title} provenance={w.counties.provenance}>
             <EChart
-              height={260}
-              option={{
-                ...rankedBarMotion,
-                grid: { left: 100, right: 30, top: 8, bottom: 24 },
-                tooltip: { trigger: "axis" },
-                xAxis: { type: "value", ...axisStyle },
-                yAxis: { type: "category", inverse: true, data: cfg.rows.map((d) => d.county_label), ...axisStyle },
-                series: [
-                  {
-                    type: "bar",
-                    barWidth: 12,
-                    itemStyle: { color: cfg.color, borderRadius: [0, 2, 2, 0] },
-                    data: cfg.rows.map((d) => d.learners)
-                  }
-                ]
-              }}
+              height={280}
+              option={rankedBarOption(
+                cfg.rows.map((d) => d.county_label),
+                cfg.rows.map((d) => d.learners),
+                cfg.color
+              )}
             />
           </Widget>
         ))}

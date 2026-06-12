@@ -34,14 +34,15 @@ export default function QualityPage() {
             <Kpi label="Total records" value={fmt(w.metrics.data.total_rows)} provenance={w.metrics.provenance} />
             <Kpi label="Unique learners" value={fmt(w.metrics.data.unique_learners)} provenance={w.metrics.provenance} />
             <Kpi
-              label="Duplicate IDs"
+              label="Duplicate learner IDs"
               value={fmt(w.metrics.data.duplicate_ids)}
-              sub={`${fmt(w.metrics.data.rows_on_duplicate_ids)} rows · ${w.metrics.data.duplicate_rate}%`}
+              sub={`${fmt(w.metrics.data.duplicate_ids)} duplicate IDs across ${fmt(w.metrics.data.rows_on_duplicate_ids)} rows (${w.metrics.data.duplicate_rate}%)`}
               provenance={w.metrics.provenance}
             />
             <Kpi
-              label="Missing county / ID"
-              value={`${fmt(w.metrics.data.missing_county)} / ${fmt(w.metrics.data.missing_id)}`}
+              label="Missing fields"
+              value={`${fmt(w.metrics.data.missing_county)} · ${fmt(w.metrics.data.missing_id)}`}
+              sub={`Missing county: ${fmt(w.metrics.data.missing_county)} · Missing ID: ${fmt(w.metrics.data.missing_id)}`}
               provenance={w.metrics.provenance}
             />
           </section>

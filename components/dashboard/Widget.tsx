@@ -35,20 +35,24 @@ export function Kpi({
   label,
   value,
   sub,
-  provenance
+  provenance,
+  compact = false
 }: {
   label: string;
   value: string;
   sub?: string;
   provenance?: Provenance;
+  compact?: boolean;
 }) {
   return (
-    <article className="rounded border border-hair bg-paperalt px-4 py-3 shadow-card">
+    <article className={`rounded border border-hair bg-paperalt shadow-card ${compact ? "px-4 py-2" : "px-4 py-3"}`}>
       <div className="flex items-center gap-2">
         <span className="eyebrow">{label}</span>
         <ProvenanceDot provenance={provenance} />
       </div>
-      <div className="tnum mt-1.5 text-[22px] font-semibold leading-7 text-ink">{value}</div>
+      <div className={`tnum font-semibold text-ink ${compact ? "mt-0.5 text-lg leading-6" : "mt-1.5 text-[22px] leading-7"}`}>
+        {value}
+      </div>
       {sub ? <div className="mt-0.5 text-[11px] text-mute">{sub}</div> : null}
     </article>
   );

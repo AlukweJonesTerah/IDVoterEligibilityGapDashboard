@@ -22,3 +22,92 @@ export const axisStyle = {
   axisLabel: { color: "#6B7787", fontSize: 11 },
   splitLine: { lineStyle: { color: "#EDF0F4" } }
 };
+
+// containLabel keeps axis labels inside the canvas so long county/course
+// names and the last x-axis tick never clip (QA 7.1).
+export const barGrid = { left: 8, right: 24, top: 12, bottom: 8, containLabel: true };
+
+// Donuts use a legend below the chart instead of external labels with leader
+// lines, which clipped at card edges (QA 7.1/7.3). Tooltip carries the detail.
+export function donutOption(
+  rows: { name: string; value: number }[],
+  colors: string[]
+): Record<string, unknown> {
+  return {
+    ...chartMotion,
+    color: colors,
+    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
+    legend: { bottom: 0, icon: "circle", itemWidth: 10, textStyle: { fontSize: 11.5, color: "#3A4856" } },
+    series: [
+      {
+        type: "pie",
+        radius: ["48%", "72%"],
+        center: ["50%", "44%"],
+        label: {
+          formatter: (p: { percent: number }) => `${Math.round(p.percent)}%`,
+          fontSize: 11.5,
+          color: "#3A4856"
+        },
+        labelLine: { length: 8, length2: 6 },
+        data: rows
+      }
+    ]
+  };
+}
+
+/** Horizontal ranked bar with safe margins and truncated names + full-name tooltips. */
+export function rankedBarOption(
+  names: string[],
+  values: number[],
+  color: string,
+  opts: { pct?: boolean } = {}
+): Record<string, unknown> {
+  return {
+    ...rankedBarMotion,
+    grid: barGrid,
+    tooltip: { trigger: "axis", ...(opts.pct ? { valueFormatter: (v: number) => `${v}%` } : {}) },
+    xAxis: {
+      type: "value",
+      ...axisStyle,
+      ...(opts.pct ? { axisLabel: { ...axisStyle.axisLabel, formatter: "{value}%" } } : {})
+    },
+    yAxis: {
+      type: "category",
+      inverse: true,
+      data: names,
+      ...axisStyle,
+      axisLabel: { ...axisStyle.axisLabel, width: 170, overflow: "truncate" },
+      triggerEvent: true
+    },
+    series: [
+      {
+        type: "bar",
+        barWidth: 12,
+        itemStyle: { color, borderRadius: [0, 2, 2, 0] },
+        data: values
+      }
+    ]
+  };
+}
+
+/** Time-series line with a real time axis so ticks are evenly spaced (QA 7.2.14). */
+export function timeLineOption(
+  series: { name: string; color: string; dashed?: boolean; area?: boolean; points: [string, number][] }[]
+): Record<string, unknown> {
+  return {
+    ...chartMotion,
+    grid: { left: 8, right: 24, top: 24, bottom: 8, containLabel: true },
+    tooltip: { trigger: "axis" },
+    xAxis: { type: "time", ...axisStyle },
+    yAxis: { type: "value", ...axisStyle },
+    series: series.map((s) => ({
+      name: s.name,
+      type: "line",
+      smooth: true,
+      symbol: "none",
+      lineStyle: { color: s.color, width: s.dashed ? 1.5 : 2, ...(s.dashed ? { type: "dashed" } : {}) },
+      ...(s.area ? { areaStyle: { color: s.color + "14" } } : {}),
+      data: s.points
+    }))
+  };
+}

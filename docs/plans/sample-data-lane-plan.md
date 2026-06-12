@@ -1,15 +1,32 @@
 # Sample Data Lane — Plan for Team Discussion
 
-**Status:** Draft for team review — not yet approved
+**Status:** Draft for team review — updated after live DB audit
 **Author:** Alfred / dashboard team
-**Date:** 2026-06-10
+**Date:** 2026-06-12
 **Relates to:** `docs/requirements/mark-data-grounded-requirements.md` (Mark's data-grounded spec), `docs/requirements/national-skilling-executive-dashboard.md` (Steph's original spec)
 
 ---
 
 ## 1. The problem this solves
 
-Mark's requirements doc describes seven source datasets. The live DB currently holds **one flattened table** (`analytics.icta_training_data`, 103,267 rows, 12 columns). That table supports roughly 2 of the 6 MVP pages with real data. The remaining pages — Demographics & Inclusion, Training Pipeline, Digital Readiness, parts of Geography — depend on data that exists in Mark's files but is not loaded.
+Mark's requirements doc describes seven source datasets. The first DB audit found only **one flattened table** (`analytics.icta_training_data`, 103,267 rows, 12 columns). A fresh audit on **2026-06-12** confirms that more source tables have now been added to the live `icta_dashboard` database, but not yet to the production demo database (`icta_dashboard_demo`) that the dashboard currently reads.
+
+The new live tables reduce the dummy-data gap, but they do not remove it completely. Registration, completion, contact, cohort/cluster, and disability supplement data are now present in some form. The detailed learner baseline table exists but has **0 rows**, so digital readiness, ward/village/GPS geography, device/internet survey responses, education/employment, income, and impact fields still need modeled placeholders until Dataset 2 is actually populated.
+
+## 1.1 Current source-data status — 2026-06-12 audit
+
+| Requirement dataset | Live DB table(s) now present | Live rows | Status now | Can replace dummy data? | Notes / action |
+|---|---:|---:|---|---|---|
+| Training records / national learner count | `analytics.icta_training_data` | 103,267 rows / 101,430 learners | **Actual** | Already actual | This remains the official progress-to-20M source. |
+| Dataset 1: Learner course registration | `analytics.pathways_data_updated`; also small registration-like `cluster_4`, `cluster_6` | 106,045 in `pathways_data_updated` | **Actual, needs normalization** | **Yes, after mapping** | Has participant name, gender, email, course, institution. Gender is sparse relative to row count, so gender should still be supplemented from other actual/sampled sources. |
+| Dataset 2: Detailed learner baseline & digital skills assessment | `analytics.uk_dap_citizens_baseline` | 0 | **Schema only / no data** | **No** | Keep dummy/modeling for digital readiness, device/internet, education, employment, income, planned use of skills, ward/village/GPS, and readiness indices. |
+| Dataset 3: Course completion & assessment | `analytics.cluster_1` | 69 | **Actual, partial** | **Partially** | Has quiz average, completion date, and percent complete, but only 69 learners. Use as actual completion sample where matched; keep modeled completion for dashboard-wide rates until the full completion export lands. |
+| Dataset 4: Learner contact & sub-county registration | `analytics.cluster_2` | 500 | **Actual, partial** | **Partially** | Has gender, phone, email, and sub-county. Useful for matching and sub-county coverage, but not enough to replace all geography modeling. |
+| Dataset 5: Busia cohort / cluster dataset | `analytics.cluster_3` | 506 | **Actual, partial** | **Yes for Busia/cohort slice** | Has cluster, cohort, device availability/type, internet type, education level, age group. Use for Busia-specific cohort/device views; keep national cohort placeholders elsewhere. |
+| Dataset 6: County, cohort, and cluster dataset | `analytics.cluster_5` | 2,747 | **Actual, partial** | **Partially** | Has county, sub-county, age group, education, cluster, and cohort. Can replace some synthetic cohort structure, but coverage is much smaller than total learners. |
+| Dataset 7: Disability, age, county/sub-county supplement | `analytics.cluster_8`, `analytics.cluster_9`; possibly `cluster_10` for age/National ID/sub-county without disability | 1,253 + 1,202 + 670 | **Actual, partial** | **Partially** | Can replace disability/age supplements for matched learners; keep modeled disability/inclusion for unmatched learners. |
+
+**Important deployment note:** production is currently pointed at `icta_dashboard_demo`, which still has the previous registry and sample tables. The new actual tables above are in live `icta_dashboard`. To show these in the dashboard, we need a controlled refresh/cutover: copy or map the new actual tables into the demo lane, update `app.dataset_registry`, and adjust API queries that currently read `sample.*` tables directly.
 
 The team's direction: **build the full dashboard now, fill data gaps with believable sample data, flag it internally, and let the data team replace it progressively.** This document defines how we do that without ever putting a fabricated number in front of leadership as if it were real.
 
@@ -146,14 +163,14 @@ Result: Page 8 (institutional/cohort performance) renders; flagged **modeled**, 
 | Page | Widgets | Provenance at launch |
 |---|---|---|
 | 1. Executive Overview | Unique learners, enrolments, progress-to-20M, counties reached, trend | **Actual** |
-| | Completion rate, gender split, inclusion summary | **Blended/Modeled** (amber) |
+| | Completion rate, gender split, inclusion summary | **Blended** after new-source mapping; still modeled for unmatched learners |
 | | Data quality score | **Actual** (computed from real table: 919 dup IDs, placeholder fields) |
 | 2. Geographic Coverage | County map, county leaderboard, top/bottom 10 | **Actual** |
-| | Sub-county/ward drilldown, completion heatmap | **Modeled** |
-| 3. Demographics & Inclusion | All splits and inclusion KPIs | **Blended** (real totals, modeled splits) |
-| 4. Training Pipeline | Funnel, drop-off, cohort progress | **Blended/Modeled** |
+| | Sub-county/ward drilldown, completion heatmap | **Blended/Modeled** — sub-county partial actual from clusters, ward still modeled |
+| 3. Demographics & Inclusion | Gender, age, disability, education, employment | **Blended** — actual supplements now exist for partial coverage; keep modeled fallback for unmatched learners |
+| 4. Training Pipeline | Funnel, drop-off, cohort progress | **Blended/Modeled** — completion actual is only 69 rows; cohorts partial actual |
 | 5. Course Performance | Enrolments by course, popularity, category mix | **Actual** |
-| | Completion/quiz by course, performance matrix | **Blended** |
+| | Completion/quiz by course, performance matrix | **Blended** — use `cluster_1` where matched, modeled fallback elsewhere |
 | 6. Data Quality | Registry, duplicates, completeness, refresh log | **Actual** — and the page that documents everything above |
 
 Net effect: the dashboard *feels complete* — every page renders, every drilldown works — while roughly half the widgets carry the quiet amber mark until real datasets land.

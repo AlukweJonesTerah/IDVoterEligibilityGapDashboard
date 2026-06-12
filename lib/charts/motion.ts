@@ -51,10 +51,10 @@ export function donutOption(
     series: [
       {
         type: "pie",
-        radius: ["46%", "70%"],
-        center: ["50%", "40%"],
-        // No external labels: they collided with the legend in narrow cards.
-        // Percentages live in the legend and the tooltip instead.
+        // Sized so the ring clears a legend of up to three rows even in
+        // short cards; percentages live in the legend and tooltip.
+        radius: ["38%", "58%"],
+        center: ["50%", "36%"],
         label: { show: false },
         data: rows
       }

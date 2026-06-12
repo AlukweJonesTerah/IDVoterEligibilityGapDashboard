@@ -40,11 +40,13 @@ export function donutOption(
     color: colors,
     tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
     legend: {
+      orient: "vertical",
       bottom: 0,
       left: "center",
       icon: "circle",
       itemWidth: 10,
       itemHeight: 10,
+      itemGap: 6,
       formatter: (name: string) => `${name} · ${pct[name]}%`,
       textStyle: { fontSize: 11.5, color: "#3A4856" }
     },

@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
+  const demographicParams = [filters.county];
   const unsupportedPartialFilters = partialPoolFilterNote(filters);
 
   const [stages, completion, completionTrend, cohorts, dailyActivity] = await Promise.all([
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
       FROM staging.demographic_persons d
       WHERE d.cohort IS NOT NULL AND ${demographicPoolFilterSql("d")}
       GROUP BY 1 ORDER BY learners DESC LIMIT 15`,
-      params
+      demographicParams
     ),
     db.query(
       `SELECT t.date_trained::text AS day, count(*)::int AS enrolments,

@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
+  const registrationParams = [filters.category];
   const unsupportedRegistrationFilters =
     filters.county || filters.from || filters.to
       ? "County and date filters cannot be applied to registration records because that source has no county or registration-date fields."
@@ -45,8 +46,8 @@ export async function GET(req: NextRequest) {
              count(DISTINCT course)::int AS courses
       FROM staging.registrations r
       LEFT JOIN course_map m ON lower(trim(r.course)) = m.course_key
-      WHERE ($2::text IS NULL OR m.category = $2::text)`,
-      params
+      WHERE ($1::text IS NULL OR m.category = $1::text)`,
+      registrationParams
     )
   ]);
 

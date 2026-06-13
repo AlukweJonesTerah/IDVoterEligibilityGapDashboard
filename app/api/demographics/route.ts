@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { fmt } from "@/lib/format";
-import { demographicPoolFilterSql, filterValues, partialPoolFilterNote, readFilters } from "@/lib/filters-server";
+import { demographicPoolFilterSql, partialPoolFilterNote, readFilters } from "@/lib/filters-server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ const POOL_NOTE =
 export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
-  const params = filterValues(filters);
+  const demographicParams = [filters.county];
   const unsupportedPartialFilters = partialPoolFilterNote(filters);
 
   const [kpis, gender, age, disability, education, device] = await Promise.all([
@@ -30,21 +30,21 @@ export async function GET(req: NextRequest) {
              count(education_level)::int AS education_known
       FROM staging.demographic_persons d
       WHERE ${demographicPoolFilterSql("d")}`,
-      params
+      demographicParams
     ),
     db.query(`
       SELECT gender AS label, count(*)::int AS learners
       FROM staging.demographic_persons d
       WHERE d.gender IS NOT NULL AND ${demographicPoolFilterSql("d")}
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
+      demographicParams
     ),
     db.query(`
       SELECT age_band AS label, count(*)::int AS learners
       FROM staging.demographic_persons d
       WHERE d.age_band IS NOT NULL AND ${demographicPoolFilterSql("d")}
       GROUP BY 1 ORDER BY 1`,
-      params
+      demographicParams
     ),
     db.query(`
       SELECT CASE WHEN has_disability THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
@@ -52,14 +52,14 @@ export async function GET(req: NextRequest) {
       FROM staging.demographic_persons d
       WHERE d.has_disability IS NOT NULL AND ${demographicPoolFilterSql("d")}
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
+      demographicParams
     ),
     db.query(`
       SELECT education_level AS label, count(*)::int AS learners
       FROM staging.demographic_persons d
       WHERE d.education_level IS NOT NULL AND ${demographicPoolFilterSql("d")}
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
+      demographicParams
     ),
     db.query(`
       SELECT CASE WHEN has_device THEN 'HAS DEVICE' ELSE 'NO DEVICE' END AS label,
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
       FROM staging.demographic_persons d
       WHERE d.has_device IS NOT NULL AND ${demographicPoolFilterSql("d")}
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
+      demographicParams
     )
   ]);
 

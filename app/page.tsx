@@ -32,7 +32,7 @@ export default function ExecutiveOverview() {
               provenance={w.headline.provenance}
             />
             <Kpi
-              label="Total trainings / enrolments"
+              label="Total trainings"
               help="Every course participation record. One learner taking five courses counts five times here."
               value={fmt(w.headline.data.enrolments)}
               sub="all course participation records"
@@ -54,19 +54,18 @@ export default function ExecutiveOverview() {
             />
             <Kpi
               label="Completion rate"
-              help="A national completion rate cannot be computed yet: only a small pilot slice of actual completion records is loaded. No modeled estimate is shown."
+              help="A national completion rate cannot be computed yet: only a small pilot slice of actual completion records is loaded. No modeled estimate is shown. Hover the source dot for the record count."
               value="Not yet measured"
-              sub={`${fmt(w.completion.data.records)} actual completion records loaded`}
               provenance={w.completion.provenance}
             />
           </section>
 
-          {/* Row 2: inclusion highlights */}
+          {/* Row 2: inclusion highlights. Coverage detail lives in the source-dot popup. */}
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi compact label="Female participation" help="Share female among pooled records with a known gender. This pool is smaller than the full learner base; hover the dot for coverage." value={fmtPct(w.inclusion.data.female_rate)} sub={`of ${fmtCompact(w.inclusion.data.gender_known)} records with gender`} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group." value={fmtPct(w.inclusion.data.youth_rate)} sub={`of ${fmtCompact(w.inclusion.data.age_known)} records with age`} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response." value={fmt(w.inclusion.data.pwd_learners)} sub={`of ${fmtCompact(w.inclusion.data.disability_known)} with a response`} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Device access" help="Device availability is recorded only for the Busia pilot records; this is not a national measure." value={fmtPct(w.inclusion.data.device_rate)} sub={`Busia pilot, ${fmtCompact(w.inclusion.data.device_known)} records`} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Female participation" help="Share female among pooled records with a known gender. Hover the source dot for how many records carry gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group. Hover the source dot for coverage." value={fmtPct(w.inclusion.data.youth_rate)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response. Hover the source dot for coverage." value={fmt(w.inclusion.data.pwd_learners)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Device access" help="Device availability is recorded only for the Busia pilot records; this is not a national measure. Hover the source dot for coverage." value={fmtPct(w.inclusion.data.device_rate)} provenance={w.inclusion.provenance} />
           </section>
 
           {/* Main visual area: map + demographic highlights */}

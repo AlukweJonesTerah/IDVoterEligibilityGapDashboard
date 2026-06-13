@@ -16,7 +16,7 @@ const PRESETS: { value: string; label: string }[] = [
 ];
 
 const selectClass =
-  "rounded border border-hair bg-paperalt px-2 py-1.5 text-xs text-ink focus:border-icta-gray focus:outline-none";
+  "min-w-[120px] flex-1 rounded border border-hair bg-paperalt px-2 py-1.5 text-xs text-ink focus:border-icta-gray focus:outline-none xl:flex-none";
 
 export function FilterBar() {
   const { filters, setFilters, clear, active } = useFilters();
@@ -30,8 +30,8 @@ export function FilterBar() {
   }, []);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 py-2.5">
-      <span className="eyebrow mr-1">Filters</span>
+    <div className="flex flex-wrap items-center gap-2 py-2.5 xl:py-0">
+      <span className="eyebrow mr-1 shrink-0">Filters</span>
 
       <select
         aria-label="County"

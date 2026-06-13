@@ -6,7 +6,7 @@ import { UnavailableNote } from "@/components/dashboard/Provenance";
 import { EChart } from "@/components/charts/EChart";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
 import { chartMotion, axisStyle, donutOption, rankedBarOption } from "@/lib/charts/motion";
-import { fmt, fmtCompact, fmtPct, labelCase } from "@/lib/format";
+import { fmt, fmtPct, labelCase } from "@/lib/format";
 
 export default function DemographicsPage() {
   const { widgets: w, error } = useDashboardData("/api/demographics");
@@ -23,30 +23,26 @@ export default function DemographicsPage() {
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
               label="Female participation"
-              help="Share female among pooled records with a known gender."
+              help="Share female among pooled records with a known gender. Hover the source dot for how many records carry gender."
               value={fmtPct(w.kpis.data.female_rate)}
-              sub={`of ${fmtCompact(w.kpis.data.gender_known)} records with gender`}
               provenance={w.kpis.provenance}
             />
             <Kpi
               label="Youth (18-34)"
-              help="Share aged 18 to 34 among pooled records with a known age group."
+              help="Share aged 18 to 34 among pooled records with a known age group. Hover the source dot for coverage."
               value={fmtPct(w.kpis.data.youth_rate)}
-              sub={`of ${fmtCompact(w.kpis.data.age_known)} records with age`}
               provenance={w.kpis.provenance}
             />
             <Kpi
               label="Persons with disability"
-              help="Pooled records reporting a disability, of those with a disability response."
+              help="Pooled records reporting a disability, of those with a disability response. Hover the source dot for coverage."
               value={fmt(w.kpis.data.pwd_learners)}
-              sub={`of ${fmtCompact(w.kpis.data.disability_known)} with a response`}
               provenance={w.kpis.provenance}
             />
             <Kpi
               label="Device access"
-              help="Device availability is recorded only for the Busia pilot records; not a national measure."
+              help="Device availability is recorded only for the Busia pilot records; not a national measure. Hover the source dot for coverage."
               value={fmtPct(w.kpis.data.device_rate)}
-              sub={`Busia pilot, ${fmtCompact(w.kpis.data.device_known)} records`}
               provenance={w.kpis.provenance}
             />
           </section>

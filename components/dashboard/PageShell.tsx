@@ -28,9 +28,9 @@ export function PageShell({
     <div className="min-h-screen">
       <header className="border-b border-hair bg-paperalt shadow-paper">
         <div className="mx-auto flex max-w-[1560px] flex-wrap items-center justify-between gap-4 px-5 pb-3 pt-4 sm:px-7 lg:px-10">
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4 sm:gap-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icta-logo.png" alt="ICT Authority" className="h-16 w-auto" />
+            <img src="/icta-logo.png" alt="ICT Authority" className="h-12 w-auto sm:h-16" />
             <div className="border-l border-hair pl-5">
               <div className="text-[15px] font-semibold leading-5 tracking-tight text-ink">
                 National Digital & AI Skills Dashboard
@@ -39,31 +39,30 @@ export function PageShell({
             </div>
           </div>
         </div>
-        <nav className="mx-auto -mb-px flex max-w-[1560px] flex-wrap gap-1 px-5 sm:px-7 lg:px-10">
-          {PAGES.map((p) => {
-            const active = pathname === p.href;
-            return (
-              <Link
-                key={p.href}
-                href={p.href}
-                className={`border-b-2 px-3 pb-2.5 pt-1.5 text-[13px] transition-colors ${
-                  active
-                    ? "border-icta-red font-semibold text-ink"
-                    : "border-transparent text-mute hover:border-hair hover:text-ink"
-                }`}
-              >
-                {p.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </header>
-
-      <div className="border-b border-hair bg-paperalt">
-        <div className="mx-auto max-w-[1560px] px-5 sm:px-7 lg:px-10">
-          <FilterBar />
+        <div className="mx-auto flex max-w-[1560px] flex-col px-5 sm:px-7 lg:px-10 xl:flex-row xl:items-center xl:justify-between xl:gap-8">
+          <nav className="-mb-px flex min-w-0 gap-1 overflow-x-auto">
+            {PAGES.map((p) => {
+              const active = pathname === p.href;
+              return (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  className={`shrink-0 whitespace-nowrap border-b-2 px-3 pb-2.5 pt-1.5 text-[13px] transition-colors ${
+                    active
+                      ? "border-icta-red font-semibold text-ink"
+                      : "border-transparent text-mute hover:border-hair hover:text-ink"
+                  }`}
+                >
+                  {p.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="shrink-0 border-t border-hair2 xl:border-0">
+            <FilterBar />
+          </div>
         </div>
-      </div>
+      </header>
 
       <main className="px-5 py-5 sm:px-7 lg:px-10">
         <div className="mx-auto flex max-w-[1560px] flex-col gap-5">

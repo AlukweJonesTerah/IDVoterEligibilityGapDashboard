@@ -113,7 +113,7 @@ export default function ExecutiveOverview() {
                     name: labelCase(d.label),
                     value: d.learners
                   })),
-                  ["#6D6E6F", "#9A6E20"]
+                  chartPalette
                 )}
               />
             </Widget>
@@ -161,7 +161,7 @@ export default function ExecutiveOverview() {
                     name: labelCase(d.gender),
                     value: d.learners
                   })),
-                  ["#101820", "#ED1C24", "#6D6E6F"]
+                  chartPalette
                 )}
               />
             </Widget>

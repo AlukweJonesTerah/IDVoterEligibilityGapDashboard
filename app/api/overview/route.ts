@@ -118,9 +118,11 @@ export async function GET(req: NextRequest) {
         )
       },
       genderSplit: {
+        // Largest slice first, matching the Demographics page, so the same
+        // category gets the same palette colour on both pages.
         data: [
-          { gender: "FEMALE", learners: p.female },
-          { gender: "MALE", learners: p.gender_known - p.female }
+          { gender: "MALE", learners: p.gender_known - p.female },
+          { gender: "FEMALE", learners: p.female }
         ],
         provenance: partialPool(`Gender known for ${fmt(p.gender_known)} of ${fmt(p.persons)} pooled records.`)
       },

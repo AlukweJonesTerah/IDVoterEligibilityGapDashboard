@@ -5,7 +5,7 @@ import { Widget, Kpi } from "@/components/dashboard/Widget";
 import { UnavailableNote } from "@/components/dashboard/Provenance";
 import { EChart } from "@/components/charts/EChart";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
-import { chartMotion, axisStyle, donutOption, rankedBarOption } from "@/lib/charts/motion";
+import { chartMotion, chartPalette, axisStyle, donutOption, rankedBarOption } from "@/lib/charts/motion";
 import { fmt, fmtPct, labelCase } from "@/lib/format";
 
 export default function DemographicsPage() {
@@ -59,7 +59,7 @@ export default function DemographicsPage() {
                     name: labelCase(d.label),
                     value: d.learners
                   })),
-                  ["#ED1C24", "#101820", "#6D6E6F"]
+                  chartPalette
                 )}
               />
             </Widget>
@@ -95,7 +95,7 @@ export default function DemographicsPage() {
                     name: labelCase(d.label),
                     value: d.learners
                   })),
-                  ["#6D6E6F", "#9A6E20"]
+                  chartPalette
                 )}
               />
             </Widget>
@@ -128,7 +128,7 @@ export default function DemographicsPage() {
                     name: labelCase(d.label),
                     value: d.learners
                   })),
-                  ["#101820", "#B0B5BC"]
+                  chartPalette
                 )}
               />
             </Widget>

@@ -66,7 +66,7 @@ export default function ExecutiveOverview() {
           {/* Row 2: inclusion highlights. Each card's popup states its own coverage. */}
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi compact label="Female participation" help="Share female among pooled records with a known gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={incProv(`Gender known for ${fmt(w.inclusion.data.gender_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
-            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group." value={fmtPct(w.inclusion.data.youth_rate)} provenance={incProv(`Age group known for ${fmt(w.inclusion.data.age_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
+            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group." value={fmtPct(w.inclusion.data.youth_rate)} provenance={incProv(`Age group known for ${fmt(w.inclusion.data.age_known)} of ${fmt(w.inclusion.data.persons)} pooled records. Bands harmonized from inconsistent source buckets into standard ranges.`)} />
             <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response." value={fmt(w.inclusion.data.pwd_learners)} provenance={incProv(`Disability response recorded for ${fmt(w.inclusion.data.disability_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
             <Kpi compact label="Device access" help="Device availability is recorded only for the Busia pilot records; this is not a national measure." value={fmtPct(w.inclusion.data.device_rate)} provenance={incProv(`Device availability recorded for ${fmt(w.inclusion.data.device_known)} records (Busia pilot only).`)} />
           </section>
@@ -108,10 +108,12 @@ export default function ExecutiveOverview() {
             <Widget title="Disability inclusion" help="Pooled records with a disability response: reported disability versus none." provenance={w.disability.provenance}>
               <EChart
                 height={380}
-                option={rankedBarOption(
-                  w.disability.data.map((d: { label: string }) => labelCase(d.label)),
-                  w.disability.data.map((d: { learners: number }) => d.learners),
-                  "#9A6E20"
+                option={donutOption(
+                  w.disability.data.map((d: { label: string; learners: number }) => ({
+                    name: labelCase(d.label),
+                    value: d.learners
+                  })),
+                  ["#6D6E6F", "#9A6E20"]
                 )}
               />
             </Widget>

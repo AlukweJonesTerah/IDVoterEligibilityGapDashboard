@@ -43,16 +43,16 @@ export async function GET(req: NextRequest) {
       SELECT count(*)::int AS persons,
              count(gender)::int AS gender_known,
              count(*) FILTER (WHERE gender = 'FEMALE')::int AS female,
-             count(age_group)::int AS age_known,
-             count(*) FILTER (WHERE (regexp_match(age_group, '(\\d+)'))[1]::int BETWEEN 15 AND 34)::int AS youth,
+             count(age_band)::int AS age_known,
+             count(*) FILTER (WHERE age_band IN ('18-24','25-34'))::int AS youth,
              count(has_disability)::int AS disability_known,
              count(*) FILTER (WHERE has_disability)::int AS pwd,
              count(has_device)::int AS device_known,
              count(*) FILTER (WHERE has_device)::int AS with_device
       FROM staging.demographic_persons`),
     db.query(`
-      SELECT age_group AS label, count(*)::int AS learners
-      FROM staging.demographic_persons WHERE age_group IS NOT NULL
+      SELECT age_band AS label, count(*)::int AS learners
+      FROM staging.demographic_persons WHERE age_band IS NOT NULL
       GROUP BY 1 ORDER BY 1`),
     db.query(`
       SELECT CASE WHEN has_disability THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
@@ -126,7 +126,11 @@ export async function GET(req: NextRequest) {
       },
       age: {
         data: age.rows,
-        provenance: partialPool(`Age group known for ${fmt(p.age_known)} of ${fmt(p.persons)} pooled records.`)
+        provenance: provenanceFor(registry, ["county_cohort", "disability_supplement", "contacts", "busia_cohort"], {
+          status: "partial",
+          coverage: `Age group known for ${fmt(p.age_known)} of ${fmt(p.persons)} pooled records.`,
+          note: "Source tables use inconsistent age buckets; bands harmonized into standard ranges (18-24, 25-34, 35-44, 45-54, 55+) by lower bound."
+        })
       },
       disability: {
         data: disability.rows,

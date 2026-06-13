@@ -32,11 +32,29 @@ CREATE TABLE IF NOT EXISTS staging.registrations (
   institution text
 );
 
+-- The source tables use inconsistent age buckets ("18-24", "26-29", "36-45",
+-- "55-64", "66", ...). Harmonize them into standard ranges by the band's lower
+-- bound so charts read cleanly. Raw age_group is preserved for audit.
+CREATE OR REPLACE FUNCTION staging.norm_age_band(text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE
+    WHEN $1 IS NULL THEN NULL
+    WHEN (regexp_match($1, '(\d+)'))[1] IS NULL THEN NULL
+    WHEN (regexp_match($1, '(\d+)'))[1]::int < 25 THEN '18-24'
+    WHEN (regexp_match($1, '(\d+)'))[1]::int < 35 THEN '25-34'
+    WHEN (regexp_match($1, '(\d+)'))[1]::int < 45 THEN '35-44'
+    WHEN (regexp_match($1, '(\d+)'))[1]::int < 55 THEN '45-54'
+    ELSE '55+'
+  END
+$$;
+
 -- One row per person with best-known attributes across the cluster sources.
-CREATE OR REPLACE VIEW staging.demographic_persons AS
+DROP VIEW IF EXISTS staging.demographic_persons;
+CREATE VIEW staging.demographic_persons AS
 SELECT person_key,
        max(gender) AS gender,
        max(age_group) AS age_group,
+       staging.norm_age_band(max(age_group)) AS age_band,
        bool_or(has_disability) AS has_disability,
        max(education_level) AS education_level,
        max(county) AS county,

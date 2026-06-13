@@ -34,7 +34,7 @@ export default function DemographicsPage() {
               label="Youth (18-34)"
               help="Share aged 18 to 34 among pooled records with a known age group."
               value={fmtPct(w.kpis.data.youth_rate)}
-              provenance={kpiProv(`Age group known for ${fmt(w.kpis.data.age_known)} of ${fmt(w.kpis.data.persons)} pooled records.`)}
+              provenance={kpiProv(`Age group known for ${fmt(w.kpis.data.age_known)} of ${fmt(w.kpis.data.persons)} pooled records. Bands harmonized from inconsistent source buckets into standard ranges.`)}
             />
             <Kpi
               label="Persons with disability"

@@ -11,6 +11,9 @@ import { fmt, fmtPct, labelCase } from "@/lib/format";
 export default function DemographicsPage() {
   const { widgets: w, error } = useDashboardData("/api/demographics");
 
+  // Per-card coverage: each KPI card states only its own field's coverage.
+  const kpiProv = (coverage: string) => (w ? { ...w.kpis.provenance, coverage } : undefined);
+
   return (
     <PageShell
       title="Demographics & Inclusion"
@@ -23,27 +26,27 @@ export default function DemographicsPage() {
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
               label="Female participation"
-              help="Share female among pooled records with a known gender. Hover the source dot for how many records carry gender."
+              help="Share female among pooled records with a known gender."
               value={fmtPct(w.kpis.data.female_rate)}
-              provenance={w.kpis.provenance}
+              provenance={kpiProv(`Gender known for ${fmt(w.kpis.data.gender_known)} of ${fmt(w.kpis.data.persons)} pooled records.`)}
             />
             <Kpi
               label="Youth (18-34)"
-              help="Share aged 18 to 34 among pooled records with a known age group. Hover the source dot for coverage."
+              help="Share aged 18 to 34 among pooled records with a known age group."
               value={fmtPct(w.kpis.data.youth_rate)}
-              provenance={w.kpis.provenance}
+              provenance={kpiProv(`Age group known for ${fmt(w.kpis.data.age_known)} of ${fmt(w.kpis.data.persons)} pooled records.`)}
             />
             <Kpi
               label="Persons with disability"
-              help="Pooled records reporting a disability, of those with a disability response. Hover the source dot for coverage."
+              help="Pooled records reporting a disability, of those with a disability response."
               value={fmt(w.kpis.data.pwd_learners)}
-              provenance={w.kpis.provenance}
+              provenance={kpiProv(`Disability response recorded for ${fmt(w.kpis.data.disability_known)} of ${fmt(w.kpis.data.persons)} pooled records.`)}
             />
             <Kpi
               label="Device access"
-              help="Device availability is recorded only for the Busia pilot records; not a national measure. Hover the source dot for coverage."
+              help="Device availability is recorded only for the Busia pilot records; not a national measure."
               value={fmtPct(w.kpis.data.device_rate)}
-              provenance={w.kpis.provenance}
+              provenance={kpiProv(`Device availability recorded for ${fmt(w.kpis.data.device_known)} records (Busia pilot only).`)}
             />
           </section>
 

@@ -13,6 +13,9 @@ export default function ExecutiveOverview() {
   const { widgets: w, error } = useDashboardData("/api/overview");
   const { setFilters } = useFilters();
 
+  // Per-card coverage: each inclusion card states only its own field's coverage.
+  const incProv = (coverage: string) => (w ? { ...w.inclusion.provenance, coverage } : undefined);
+
   return (
     <PageShell
       title="Executive Overview"
@@ -60,12 +63,12 @@ export default function ExecutiveOverview() {
             />
           </section>
 
-          {/* Row 2: inclusion highlights. Coverage detail lives in the source-dot popup. */}
+          {/* Row 2: inclusion highlights. Each card's popup states its own coverage. */}
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi compact label="Female participation" help="Share female among pooled records with a known gender. Hover the source dot for how many records carry gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group. Hover the source dot for coverage." value={fmtPct(w.inclusion.data.youth_rate)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response. Hover the source dot for coverage." value={fmt(w.inclusion.data.pwd_learners)} provenance={w.inclusion.provenance} />
-            <Kpi compact label="Device access" help="Device availability is recorded only for the Busia pilot records; this is not a national measure. Hover the source dot for coverage." value={fmtPct(w.inclusion.data.device_rate)} provenance={w.inclusion.provenance} />
+            <Kpi compact label="Female participation" help="Share female among pooled records with a known gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={incProv(`Gender known for ${fmt(w.inclusion.data.gender_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
+            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group." value={fmtPct(w.inclusion.data.youth_rate)} provenance={incProv(`Age group known for ${fmt(w.inclusion.data.age_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
+            <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response." value={fmt(w.inclusion.data.pwd_learners)} provenance={incProv(`Disability response recorded for ${fmt(w.inclusion.data.disability_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
+            <Kpi compact label="Device access" help="Device availability is recorded only for the Busia pilot records; this is not a national measure." value={fmtPct(w.inclusion.data.device_rate)} provenance={incProv(`Device availability recorded for ${fmt(w.inclusion.data.device_known)} records (Busia pilot only).`)} />
           </section>
 
           {/* Main visual area: map + demographic highlights */}

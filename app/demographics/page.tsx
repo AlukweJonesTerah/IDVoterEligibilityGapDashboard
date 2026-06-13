@@ -52,55 +52,67 @@ export default function DemographicsPage() {
 
           <section className="grid gap-4 lg:grid-cols-3">
             <Widget title="Gender distribution" help="Pooled records with a known gender." provenance={w.gender.provenance}>
-              <EChart
-                height={260}
-                mobileHeight={240}
-                option={donutOption(
-                  w.gender.data.map((d: { label: string; learners: number }) => ({
-                    name: labelCase(d.label),
-                    value: d.learners
-                  })),
-                  chartPalette
-                )}
-              />
+              {w.gender.data.length ? (
+                <EChart
+                  height={260}
+                  mobileHeight={240}
+                  option={donutOption(
+                    w.gender.data.map((d: { label: string; learners: number }) => ({
+                      name: labelCase(d.label),
+                      value: d.learners
+                    })),
+                    chartPalette
+                  )}
+                />
+              ) : (
+                <UnavailableNote reason="No gender records are available for the current county filter in the partial demographic source pool." />
+              )}
             </Widget>
             <Widget title="Age groups" help="Pooled records by age band." provenance={w.age.provenance}>
-              <EChart
-                height={260}
-                mobileHeight={240}
-                option={{
-                  ...chartMotion,
-                  grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
-                  tooltip: { trigger: "axis" },
-                  xAxis: { type: "category", data: w.age.data.map((d: { label: string }) => d.label), ...axisStyle },
-                  yAxis: { type: "value", ...axisStyle },
-                  series: [
-                    {
-                      type: "bar",
-                      barWidth: 28,
-                      itemStyle: { color: "#101820", borderRadius: [2, 2, 0, 0] },
-                      data: w.age.data.map((d: { learners: number }) => d.learners)
-                    }
-                  ]
-                }}
-              />
+              {w.age.data.length ? (
+                <EChart
+                  height={260}
+                  mobileHeight={240}
+                  option={{
+                    ...chartMotion,
+                    grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
+                    tooltip: { trigger: "axis" },
+                    xAxis: { type: "category", data: w.age.data.map((d: { label: string }) => d.label), ...axisStyle },
+                    yAxis: { type: "value", ...axisStyle },
+                    series: [
+                      {
+                        type: "bar",
+                        barWidth: 28,
+                        itemStyle: { color: "#101820", borderRadius: [2, 2, 0, 0] },
+                        data: w.age.data.map((d: { learners: number }) => d.learners)
+                      }
+                    ]
+                  }}
+                />
+              ) : (
+                <UnavailableNote reason="No age records are available for the current county filter in the partial demographic source pool." />
+              )}
             </Widget>
             <Widget
               title="Disability inclusion"
               help="Pooled records with a disability response: reported disability versus none."
               provenance={w.disability.provenance}
             >
-              <EChart
-                height={260}
-                mobileHeight={240}
-                option={donutOption(
-                  w.disability.data.map((d: { label: string; learners: number }) => ({
-                    name: labelCase(d.label),
-                    value: d.learners
-                  })),
-                  chartPalette
-                )}
-              />
+              {w.disability.data.length ? (
+                <EChart
+                  height={260}
+                  mobileHeight={240}
+                  option={donutOption(
+                    w.disability.data.map((d: { label: string; learners: number }) => ({
+                      name: labelCase(d.label),
+                      value: d.learners
+                    })),
+                    chartPalette
+                  )}
+                />
+              ) : (
+                <UnavailableNote reason="No disability supplement records are available for the current county filter. This is partial source coverage, not a zero-disability result." />
+              )}
             </Widget>
           </section>
 
@@ -110,31 +122,39 @@ export default function DemographicsPage() {
               help="Highest education level where recorded (Busia and county cohort sources)."
               provenance={w.education.provenance}
             >
-              <EChart
-                height={280}
-                option={rankedBarOption(
-                  w.education.data.map((d: { label: string }) => labelCase(d.label)),
-                  w.education.data.map((d: { learners: number }) => d.learners),
-                  "#ED1C24"
-                )}
-              />
+              {w.education.data.length ? (
+                <EChart
+                  height={280}
+                  option={rankedBarOption(
+                    w.education.data.map((d: { label: string }) => labelCase(d.label)),
+                    w.education.data.map((d: { learners: number }) => d.learners),
+                    "#ED1C24"
+                  )}
+                />
+              ) : (
+                <UnavailableNote reason="No education records are available for the current county filter in the partial demographic source pool." />
+              )}
             </Widget>
             <Widget
               title="Device availability (Busia pilot)"
               help="Device availability from the Busia pilot records only; not a national measure."
               provenance={w.device.provenance}
             >
-              <EChart
-                height={280}
-                mobileHeight={240}
-                option={donutOption(
-                  w.device.data.map((d: { label: string; learners: number }) => ({
-                    name: labelCase(d.label),
-                    value: d.learners
-                  })),
-                  chartPalette
-                )}
-              />
+              {w.device.data.length ? (
+                <EChart
+                  height={280}
+                  mobileHeight={240}
+                  option={donutOption(
+                    w.device.data.map((d: { label: string; learners: number }) => ({
+                      name: labelCase(d.label),
+                      value: d.learners
+                    })),
+                    chartPalette
+                  )}
+                />
+              ) : (
+                <UnavailableNote reason="No device records are available for the current county filter. Device availability is only present in the Busia pilot source." />
+              )}
             </Widget>
             <Widget
               title="Employment status"

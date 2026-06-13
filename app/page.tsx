@@ -2,6 +2,7 @@
 
 import { PageShell } from "@/components/dashboard/PageShell";
 import { Widget, Kpi } from "@/components/dashboard/Widget";
+import { UnavailableNote } from "@/components/dashboard/Provenance";
 import { EChart } from "@/components/charts/EChart";
 import { KenyaMap } from "@/components/charts/KenyaMap";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
@@ -87,38 +88,46 @@ export default function ExecutiveOverview() {
               <p className="mt-1 text-[11px] text-mute">Click a county to filter every page to it.</p>
             </Widget>
             <Widget title="Age groups" help="Pooled records by age band. Covers the records with demographic data, not the full learner base." provenance={w.age.provenance}>
-              <EChart
-                height={380}
-                mobileHeight={240}
-                option={{
-                  ...chartMotion,
-                  grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
-                  tooltip: { trigger: "axis" },
-                  xAxis: { type: "category", data: w.age.data.map((d: { label: string }) => d.label), ...axisStyle },
-                  yAxis: { type: "value", ...axisStyle },
-                  series: [
-                    {
-                      type: "bar",
-                      barWidth: 28,
-                      itemStyle: { color: "#101820", borderRadius: [2, 2, 0, 0] },
-                      data: w.age.data.map((d: { learners: number }) => d.learners)
-                    }
-                  ]
-                }}
-              />
+              {w.age.data.length ? (
+                <EChart
+                  height={380}
+                  mobileHeight={240}
+                  option={{
+                    ...chartMotion,
+                    grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
+                    tooltip: { trigger: "axis" },
+                    xAxis: { type: "category", data: w.age.data.map((d: { label: string }) => d.label), ...axisStyle },
+                    yAxis: { type: "value", ...axisStyle },
+                    series: [
+                      {
+                        type: "bar",
+                        barWidth: 28,
+                        itemStyle: { color: "#101820", borderRadius: [2, 2, 0, 0] },
+                        data: w.age.data.map((d: { learners: number }) => d.learners)
+                      }
+                    ]
+                  }}
+                />
+              ) : (
+                <UnavailableNote reason="No partial demographic source records are available for the current county filter. Course and date filters are not available in these demographic source tables." />
+              )}
             </Widget>
             <Widget title="Disability inclusion" help="Pooled records with a disability response: reported disability versus none." provenance={w.disability.provenance}>
-              <EChart
-                height={380}
-                mobileHeight={260}
-                option={donutOption(
-                  w.disability.data.map((d: { label: string; learners: number }) => ({
-                    name: labelCase(d.label),
-                    value: d.learners
-                  })),
-                  chartPalette
-                )}
-              />
+              {w.disability.data.length ? (
+                <EChart
+                  height={380}
+                  mobileHeight={260}
+                  option={donutOption(
+                    w.disability.data.map((d: { label: string; learners: number }) => ({
+                      name: labelCase(d.label),
+                      value: d.learners
+                    })),
+                    chartPalette
+                  )}
+                />
+              ) : (
+                <UnavailableNote reason="No disability supplement records are available for the current county filter. This is partial source coverage, not a zero-disability result." />
+              )}
             </Widget>
           </section>
 
@@ -157,16 +166,20 @@ export default function ExecutiveOverview() {
               />
             </Widget>
             <Widget title="Gender split" help="Pooled records with a known gender." provenance={w.genderSplit.provenance}>
-              <EChart
-                height={230}
-                option={donutOption(
-                  w.genderSplit.data.map((d: { gender: string; learners: number }) => ({
-                    name: labelCase(d.gender),
-                    value: d.learners
-                  })),
-                  chartPalette
-                )}
-              />
+              {w.genderSplit.data.some((d: { learners: number }) => d.learners > 0) ? (
+                <EChart
+                  height={230}
+                  option={donutOption(
+                    w.genderSplit.data.map((d: { gender: string; learners: number }) => ({
+                      name: labelCase(d.gender),
+                      value: d.learners
+                    })),
+                    chartPalette
+                  )}
+                />
+              ) : (
+                <UnavailableNote reason="No gender records are available for the current county filter in the partial demographic source pool." />
+              )}
             </Widget>
           </section>
         </>

@@ -27,14 +27,16 @@ export function PageShell({
     <div className="min-h-screen">
       <header className="border-b border-hair bg-paperalt shadow-paper">
         <div className="mx-auto flex max-w-[1560px] flex-wrap items-center justify-between gap-4 px-5 pb-3 pt-4 sm:px-7 lg:px-10">
-          <div className="flex items-center gap-4 sm:gap-5">
+          <div className="flex items-center gap-3 sm:gap-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icta-logo.png" alt="ICT Authority" className="h-12 w-auto sm:h-16" />
-            <div className="border-l border-hair pl-5">
-              <div className="text-[15px] font-semibold leading-5 tracking-tight text-ink">
+            <img src="/icta-logo.png" alt="ICT Authority" className="h-10 w-auto sm:h-16" />
+            <div className="border-l border-hair pl-3 sm:pl-5">
+              <div className="text-[13px] font-semibold leading-snug tracking-tight text-ink sm:text-[15px]">
                 National Digital & AI Skills Dashboard
               </div>
-              <div className="eyebrow mt-1">ICT Authority · Microsoft · Pathways Technologies</div>
+              <div className="mt-0.5 whitespace-nowrap text-[8.5px] font-semibold uppercase tracking-normal text-mute sm:mt-1 sm:text-[10.5px] sm:tracking-[0.06em]">
+                ICT Authority · Microsoft · Pathways Technologies
+              </div>
             </div>
           </div>
         </div>

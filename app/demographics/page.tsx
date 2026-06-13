@@ -23,7 +23,7 @@ export default function DemographicsPage() {
         <LoadingBlock error={error} />
       ) : (
         <>
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
               label="Female participation"
               help="Share female among pooled records with a known gender."

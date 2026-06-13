@@ -40,7 +40,7 @@ export default function CoursesAndPipelinePage() {
       subtitle="What learners take, plus registration intake and the completion data received so far. All figures come from live source data."
     >
       {/* Summary cards */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Courses offered" help="Number of distinct courses with enrolments in the current scope." value={String(courses.length)} provenance={c.courses.provenance} />
         <Kpi label="Most popular" help="Course with the most enrolments." value={labelCase(top?.course)} sub={`${fmt(top?.enrolments)} enrolments`} provenance={c.courses.provenance} />
         <Kpi
@@ -58,7 +58,7 @@ export default function CoursesAndPipelinePage() {
           provenance={c.categories.provenance}
         />
       </section>
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi compact label="Registered" help="Distinct learners in the training records." value={fmt(p.funnel.data.registered)} provenance={p.funnel.provenance} />
         <Kpi compact label="Enrolled" help="Course enrolments; one learner can enrol in several courses." value={fmt(p.funnel.data.enrolled)} provenance={p.funnel.provenance} />
         <Kpi

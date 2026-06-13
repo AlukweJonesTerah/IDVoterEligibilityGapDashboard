@@ -42,7 +42,7 @@ export default function GeographyPage() {
       title="Geographic Coverage"
       subtitle="Where learners are being reached. Click a county on the map or table to drill into its regions; the selection applies on every page."
     >
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Counties reached" help="Counties with at least one learner in the current filter scope, out of Kenya's 47." value={`${counties.length} / 47`} provenance={w.counties.provenance} />
         <Kpi label="Top county" help="County with the most unique learners in scope." value={top10[0]?.county_label ?? "—"} sub={`${fmt(top10[0]?.learners)} learners`} provenance={w.counties.provenance} />
         <Kpi label="Lowest county" help="County with the fewest unique learners in scope." value={bottom10[0]?.county_label ?? "—"} sub={`${fmt(bottom10[0]?.learners)} learners`} provenance={w.counties.provenance} />

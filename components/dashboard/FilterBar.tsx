@@ -31,8 +31,6 @@ export function FilterBar() {
 
   return (
     <div className="flex flex-wrap items-center gap-2 py-2.5 xl:py-0">
-      <span className="eyebrow mr-1 shrink-0">Filters</span>
-
       <select
         aria-label="County"
         className={selectClass}

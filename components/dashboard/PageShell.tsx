@@ -8,10 +8,9 @@ import { FilterBar } from "./FilterBar";
 
 const PAGES = [
   { href: "/", label: "Executive Overview" },
-  { href: "/geography", label: "Geographic Coverage" },
-  { href: "/demographics", label: "Demographics & Inclusion" },
   { href: "/courses", label: "Courses & Pipeline" },
-  { href: "/quality", label: "Data Quality" }
+  { href: "/geography", label: "Geographic Coverage" },
+  { href: "/demographics", label: "Demographics & Inclusion" }
 ];
 
 export function PageShell({

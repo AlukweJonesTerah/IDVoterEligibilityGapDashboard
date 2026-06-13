@@ -60,7 +60,7 @@ export function ProvenanceLegend() {
       <span className="inline-flex items-center gap-1.5" title={LABELS.unavailable}>
         <span className="inline-block h-[9px] w-[9px] rounded-full border-2 border-mute" /> not in source yet
       </span>
-      <span className="text-mute">hover any dot for coverage details · full registry on the Data Quality page</span>
+      <span className="text-mute">hover any dot for source and coverage details</span>
     </div>
   );
 }

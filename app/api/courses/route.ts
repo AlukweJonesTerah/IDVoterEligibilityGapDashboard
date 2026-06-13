@@ -8,7 +8,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const registry = await getRegistry();
-  const params = filterValues(readFilters(req));
+  const filters = readFilters(req);
+  const params = filterValues(filters);
+  const unsupportedRegistrationFilters =
+    filters.county || filters.from || filters.to
+      ? "County and date filters cannot be applied to registration records because that source has no county or registration-date fields."
+      : null;
 
   const [courses, categories, registrations] = await Promise.all([
     db.query(
@@ -28,11 +33,21 @@ export async function GET(req: NextRequest) {
        GROUP BY 1 ORDER BY 2 DESC`,
       params
     ),
-    db.query(`
+    db.query(
+      `
+      WITH course_map AS (
+        SELECT lower(trim(course_taken)) AS course_key, min(course_category) AS category
+        FROM analytics.icta_training_data
+        GROUP BY 1
+      )
       SELECT count(*)::int AS total,
              count(gender)::int AS gender_known,
              count(DISTINCT course)::int AS courses
-      FROM staging.registrations`)
+      FROM staging.registrations r
+      LEFT JOIN course_map m ON lower(trim(r.course)) = m.course_key
+      WHERE ($2::text IS NULL OR m.category = $2::text)`,
+      params
+    )
   ]);
 
   const reg = registrations.rows[0];
@@ -54,7 +69,7 @@ export async function GET(req: NextRequest) {
         provenance: provenanceFor(registry, ["registration"], {
           status: "partial",
           coverage: `${fmt(reg.total)} registration records across ${reg.courses} course labels; gender present on ${fmt(reg.gender_known)}.`,
-          note: "Intake measure from the registration source. There is no shared learner key to the training table, so this is never added to trained-learner counts."
+          note: `Intake measure from the registration source. Category filters apply only where registration course names map to training course categories. There is no shared learner key to the training table, so this is never added to trained-learner counts.${unsupportedRegistrationFilters ? ` ${unsupportedRegistrationFilters}` : ""}`
         })
       }
     }

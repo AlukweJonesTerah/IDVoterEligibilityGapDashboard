@@ -1,16 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { fmt } from "@/lib/format";
+import { demographicPoolFilterSql, filterValues, partialPoolFilterNote, readFilters } from "@/lib/filters-server";
 
 export const dynamic = "force-dynamic";
 
 const POOL_KEYS = ["county_cohort", "disability_supplement", "contacts", "busia_cohort"];
 const POOL_NOTE =
-  "From the pool of live records with demographic data. Global filters do not apply to this pool; it is not the full 101k learner base.";
+  "From the pool of live records with demographic data. County filters apply where the source records carry county; this is not the full 101k learner base.";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const registry = await getRegistry();
+  const filters = readFilters(req);
+  const params = filterValues(filters);
+  const unsupportedPartialFilters = partialPoolFilterNote(filters);
 
   const [kpis, gender, age, disability, education, device] = await Promise.all([
     db.query(`
@@ -24,35 +28,57 @@ export async function GET() {
              count(has_device)::int AS device_known,
              count(*) FILTER (WHERE has_device)::int AS with_device,
              count(education_level)::int AS education_known
-      FROM staging.demographic_persons`),
+      FROM staging.demographic_persons d
+      WHERE ${demographicPoolFilterSql("d")}`,
+      params
+    ),
     db.query(`
       SELECT gender AS label, count(*)::int AS learners
-      FROM staging.demographic_persons WHERE gender IS NOT NULL
-      GROUP BY 1 ORDER BY 2 DESC`),
+      FROM staging.demographic_persons d
+      WHERE d.gender IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY 2 DESC`,
+      params
+    ),
     db.query(`
       SELECT age_band AS label, count(*)::int AS learners
-      FROM staging.demographic_persons WHERE age_band IS NOT NULL
-      GROUP BY 1 ORDER BY 1`),
+      FROM staging.demographic_persons d
+      WHERE d.age_band IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY 1`,
+      params
+    ),
     db.query(`
       SELECT CASE WHEN has_disability THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
              count(*)::int AS learners
-      FROM staging.demographic_persons WHERE has_disability IS NOT NULL
-      GROUP BY 1 ORDER BY 2 DESC`),
+      FROM staging.demographic_persons d
+      WHERE d.has_disability IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY 2 DESC`,
+      params
+    ),
     db.query(`
       SELECT education_level AS label, count(*)::int AS learners
-      FROM staging.demographic_persons WHERE education_level IS NOT NULL
-      GROUP BY 1 ORDER BY 2 DESC`),
+      FROM staging.demographic_persons d
+      WHERE d.education_level IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY 2 DESC`,
+      params
+    ),
     db.query(`
       SELECT CASE WHEN has_device THEN 'HAS DEVICE' ELSE 'NO DEVICE' END AS label,
              count(*)::int AS learners
-      FROM staging.demographic_persons WHERE has_device IS NOT NULL
-      GROUP BY 1 ORDER BY 2 DESC`)
+      FROM staging.demographic_persons d
+      WHERE d.has_device IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY 2 DESC`,
+      params
+    )
   ]);
 
   const k = kpis.rows[0];
   const pct = (a: number, b: number) => (b > 0 ? Number(((100 * a) / b).toFixed(1)) : null);
   const partial = (coverage: string) =>
-    provenanceFor(registry, POOL_KEYS, { status: "partial", coverage, note: POOL_NOTE });
+    provenanceFor(registry, POOL_KEYS, {
+      status: "partial",
+      coverage,
+      note: unsupportedPartialFilters ? `${POOL_NOTE} ${unsupportedPartialFilters}` : POOL_NOTE
+    });
 
   return NextResponse.json({
     widgets: {

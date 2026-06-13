@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor, TARGET_TOTAL } from "@/lib/provenance";
-import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import {
+  readFilters,
+  filterValues,
+  filterSql,
+  demographicPoolFilterSql,
+  partialPoolFilterNote
+} from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 const POOL_NOTE =
-  "From the pool of records with demographic data in the live sources. Global filters do not apply to this pool; it is not the full 101k learner base.";
+  "From the pool of records with demographic data in the live sources. County filters apply where the source records carry county; this is not the full 101k learner base.";
 
 export async function GET(req: NextRequest) {
   const registry = await getRegistry();
-  const params = filterValues(readFilters(req));
+  const filters = readFilters(req);
+  const params = filterValues(filters);
+  const unsupportedPartialFilters = partialPoolFilterNote(filters);
 
   const [totals, categories, countyMap, pool, age, disability, completion] = await Promise.all([
     db.query(
@@ -49,16 +57,25 @@ export async function GET(req: NextRequest) {
              count(*) FILTER (WHERE has_disability)::int AS pwd,
              count(has_device)::int AS device_known,
              count(*) FILTER (WHERE has_device)::int AS with_device
-      FROM staging.demographic_persons`),
+      FROM staging.demographic_persons d
+      WHERE ${demographicPoolFilterSql("d")}`,
+      params
+    ),
     db.query(`
       SELECT age_band AS label, count(*)::int AS learners
-      FROM staging.demographic_persons WHERE age_band IS NOT NULL
-      GROUP BY 1 ORDER BY 1`),
+      FROM staging.demographic_persons d
+      WHERE d.age_band IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY 1`,
+      params
+    ),
     db.query(`
       SELECT CASE WHEN has_disability THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
              count(*)::int AS learners
-      FROM staging.demographic_persons WHERE has_disability IS NOT NULL
-      GROUP BY 1 ORDER BY 2 DESC`),
+      FROM staging.demographic_persons d
+      WHERE d.has_disability IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY 2 DESC`,
+      params
+    ),
     db.query(`
       SELECT count(*)::int AS records,
              round(avg(quiz_average), 1)::float AS avg_quiz,
@@ -74,7 +91,7 @@ export async function GET(req: NextRequest) {
     provenanceFor(registry, ["county_cohort", "disability_supplement", "contacts", "busia_cohort"], {
       status: "partial",
       coverage,
-      note: POOL_NOTE
+      note: unsupportedPartialFilters ? `${POOL_NOTE} ${unsupportedPartialFilters}` : POOL_NOTE
     });
 
   return NextResponse.json({

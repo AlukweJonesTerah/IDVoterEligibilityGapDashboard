@@ -43,3 +43,19 @@ export const learnerScopeSql = (a: string) => `
   ${a}.unique_id IN (
     SELECT t.unique_id FROM analytics.icta_training_data t WHERE ${filterSql("t")}
   )`;
+
+/**
+ * WHERE fragment for the partial demographic/cohort pool. These sources carry
+ * county on some records but do not carry training course category or date, and
+ * they do not have a reliable shared learner key back to icta_training_data.
+ */
+export const demographicPoolFilterSql = (a: string) => `
+  ($1::text IS NULL OR (${a}.county IS NOT NULL AND ref.norm_county(${a}.county) = ref.norm_county($1::text)))`;
+
+export function partialPoolFilterNote(f: Filters): string | null {
+  const unsupported: string[] = [];
+  if (f.category) unsupported.push("course category");
+  if (f.from || f.to) unsupported.push("date range");
+  if (unsupported.length === 0) return null;
+  return `${unsupported.join(" and ")} filters cannot be applied to this partial demographic pool because the source tables do not contain those fields or a reliable shared learner key.`;
+}

@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
-import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import {
+  readFilters,
+  filterValues,
+  filterSql,
+  demographicPoolFilterSql,
+  partialPoolFilterNote
+} from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const registry = await getRegistry();
-  const params = filterValues(readFilters(req));
+  const filters = readFilters(req);
+  const params = filterValues(filters);
+  const unsupportedPartialFilters = partialPoolFilterNote(filters);
 
   const [stages, completion, completionTrend, cohorts, dailyActivity] = await Promise.all([
     db.query(
@@ -31,8 +39,11 @@ export async function GET(req: NextRequest) {
     db.query(`
       SELECT cohort, count(*)::int AS learners,
              count(gender)::int AS gender_known
-      FROM staging.demographic_persons WHERE cohort IS NOT NULL
-      GROUP BY 1 ORDER BY learners DESC LIMIT 15`),
+      FROM staging.demographic_persons d
+      WHERE d.cohort IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      GROUP BY 1 ORDER BY learners DESC LIMIT 15`,
+      params
+    ),
     db.query(
       `SELECT t.date_trained::text AS day, count(*)::int AS enrolments,
               count(DISTINCT t.unique_id)::int AS learners
@@ -78,7 +89,7 @@ export async function GET(req: NextRequest) {
         data: cohorts.rows,
         provenance: provenanceFor(registry, ["county_cohort", "busia_cohort"], {
           status: "partial",
-          note: "Real cohort assignments from the cohort sources; covers a partial record pool, not all learners. Completion per cohort is not yet in the source data."
+          note: `Real cohort assignments from the cohort sources; covers a partial record pool, not all learners. County filters apply where source records carry county. Completion per cohort is not yet in the source data.${unsupportedPartialFilters ? ` ${unsupportedPartialFilters}` : ""}`
         })
       },
       dailyActivity: {

@@ -74,6 +74,7 @@ export default function GeographyPage() {
           {!selected ? (
             <KenyaMap
               height={460}
+              mobileHeight={340}
               label="Learners"
               onCountyClick={(county) => setFilters({ county })}
               data={counties.map((d) => ({
@@ -87,6 +88,7 @@ export default function GeographyPage() {
           ) : (
             <EChart
               height={460}
+              mobileHeight={360}
               option={rankedBarOption(
                 regions.map((r) => labelCase(r.region)),
                 regions.map((r) => r.learners),

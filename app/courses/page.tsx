@@ -84,6 +84,7 @@ export default function CoursesAndPipelinePage() {
         <Widget title="Category mix" help="How enrolments split across the course categories." provenance={c.categories.provenance}>
           <EChart
             height={400}
+            mobileHeight={260}
             option={donutOption(
               c.categories.data.map((d: { category: string; enrolments: number }) => ({
                 name: labelCase(d.category),

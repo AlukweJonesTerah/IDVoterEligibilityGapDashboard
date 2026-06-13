@@ -16,11 +16,13 @@ export interface CountyDatum {
 export function KenyaMap({
   data,
   height = 420,
+  mobileHeight,
   label = "Learners",
   onCountyClick
 }: {
   data: CountyDatum[];
   height?: number;
+  mobileHeight?: number;
   label?: string;
   onCountyClick?: (county: string) => void;
 }) {
@@ -95,6 +97,7 @@ export function KenyaMap({
     <EChart
       option={option}
       height={height}
+      mobileHeight={mobileHeight}
       onEvents={onCountyClick ? { click: (p: { name?: string }) => p.name && onCountyClick(p.name) } : undefined}
     />
   );

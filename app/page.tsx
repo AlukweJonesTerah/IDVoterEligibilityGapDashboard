@@ -76,6 +76,7 @@ export default function ExecutiveOverview() {
             <Widget title="Reach by county" help="Unique learners by county. Darker red means more learners. Click a county to filter the whole dashboard to it." provenance={w.countyMap.provenance}>
               <KenyaMap
                 height={380}
+                mobileHeight={300}
                 label="Learners"
                 onCountyClick={(county) => setFilters({ county })}
                 data={w.countyMap.data.map((d: { county_label: string; learners: number }) => ({
@@ -88,6 +89,7 @@ export default function ExecutiveOverview() {
             <Widget title="Age groups" help="Pooled records by age band. Covers the records with demographic data, not the full learner base." provenance={w.age.provenance}>
               <EChart
                 height={380}
+                mobileHeight={240}
                 option={{
                   ...chartMotion,
                   grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
@@ -108,6 +110,7 @@ export default function ExecutiveOverview() {
             <Widget title="Disability inclusion" help="Pooled records with a disability response: reported disability versus none." provenance={w.disability.provenance}>
               <EChart
                 height={380}
+                mobileHeight={260}
                 option={donutOption(
                   w.disability.data.map((d: { label: string; learners: number }) => ({
                     name: labelCase(d.label),

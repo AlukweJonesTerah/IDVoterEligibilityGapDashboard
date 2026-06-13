@@ -54,6 +54,7 @@ export default function DemographicsPage() {
             <Widget title="Gender distribution" help="Pooled records with a known gender." provenance={w.gender.provenance}>
               <EChart
                 height={260}
+                mobileHeight={240}
                 option={donutOption(
                   w.gender.data.map((d: { label: string; learners: number }) => ({
                     name: labelCase(d.label),
@@ -66,6 +67,7 @@ export default function DemographicsPage() {
             <Widget title="Age groups" help="Pooled records by age band." provenance={w.age.provenance}>
               <EChart
                 height={260}
+                mobileHeight={240}
                 option={{
                   ...chartMotion,
                   grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
@@ -90,6 +92,7 @@ export default function DemographicsPage() {
             >
               <EChart
                 height={260}
+                mobileHeight={240}
                 option={donutOption(
                   w.disability.data.map((d: { label: string; learners: number }) => ({
                     name: labelCase(d.label),
@@ -123,6 +126,7 @@ export default function DemographicsPage() {
             >
               <EChart
                 height={280}
+                mobileHeight={240}
                 option={donutOption(
                   w.device.data.map((d: { label: string; learners: number }) => ({
                     name: labelCase(d.label),

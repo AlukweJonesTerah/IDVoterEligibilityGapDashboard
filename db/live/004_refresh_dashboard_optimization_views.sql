@@ -1,0 +1,33 @@
+-- Refresh order for the dashboard optimization materialized views.
+-- Run this after analytics."20_million_by_2032" is reloaded.
+
+REFRESH MATERIALIZED VIEW analytics.dashboard_people_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_overview_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_county_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_course_category_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_course_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_gender_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_age_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_disability_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_education_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_device_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_pipeline_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_completion_trend_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_cohort_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_pipeline_daily_activity_mv;
+
+ANALYZE analytics."20_million_by_2032";
+ANALYZE analytics.dashboard_people_mv;
+ANALYZE analytics.dashboard_overview_summary_mv;
+ANALYZE analytics.dashboard_county_summary_mv;
+ANALYZE analytics.dashboard_course_category_summary_mv;
+ANALYZE analytics.dashboard_course_summary_mv;
+ANALYZE analytics.dashboard_gender_summary_mv;
+ANALYZE analytics.dashboard_age_summary_mv;
+ANALYZE analytics.dashboard_disability_summary_mv;
+ANALYZE analytics.dashboard_education_summary_mv;
+ANALYZE analytics.dashboard_device_summary_mv;
+ANALYZE analytics.dashboard_pipeline_summary_mv;
+ANALYZE analytics.dashboard_completion_trend_mv;
+ANALYZE analytics.dashboard_cohort_summary_mv;
+ANALYZE analytics.dashboard_pipeline_daily_activity_mv;

@@ -3,7 +3,7 @@ import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { fmt } from "@/lib/format";
-import { filterSql, filterValues, readFilters } from "@/lib/filters-server";
+import { filterSql, filterValues, isUnfiltered, readFilters } from "@/lib/filters-server";
 import {
   ageBandSql,
   hasDeviceSql,
@@ -23,9 +23,15 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
+  const useSummary = isUnfiltered(filters);
 
   const [kpis, gender, age, disability, education, device] = await Promise.all([
-    db.query(`
+    useSummary
+      ? db.query(`
+        SELECT unique_learners AS persons, gender_known, female, age_known, youth,
+               disability_known, pwd, device_known, with_device, education_known
+        FROM analytics.dashboard_overview_summary_mv`)
+      : db.query(`
       SELECT count(*)::int AS persons,
              count(gender)::int AS gender_known,
              count(*) FILTER (WHERE lower(trim(gender)) = 'female')::int AS female,
@@ -52,9 +58,11 @@ export async function GET(req: NextRequest) {
           CASE WHEN ${nonBlankSql("t.age_group")} THEN 0 ELSE 1 END,
           CASE WHEN ${nonBlankSql("t.education_level")} THEN 0 ELSE 1 END
       ) d`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT label, learners FROM analytics.dashboard_gender_summary_mv ORDER BY learners DESC`)
+      : db.query(`
       SELECT gender AS label, count(*)::int AS learners
       FROM (
         SELECT ${personKeySql("t")} AS person_key, nullif(trim(t.gender), '') AS gender
@@ -63,9 +71,14 @@ export async function GET(req: NextRequest) {
       ) d
       WHERE d.gender IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`
+        SELECT label, learners
+        FROM analytics.dashboard_age_summary_mv
+        ORDER BY CASE label WHEN '18-24' THEN 1 WHEN '25-34' THEN 2 WHEN '35+' THEN 3 WHEN '45-54' THEN 4 WHEN '55+' THEN 5 ELSE 99 END`)
+      : db.query(`
       SELECT age_band AS label, count(*)::int AS learners
       FROM (
         SELECT ${personKeySql("t")} AS person_key, ${ageBandSql("t.age_group")} AS age_band
@@ -75,9 +88,11 @@ export async function GET(req: NextRequest) {
       WHERE d.age_band IS NOT NULL
       GROUP BY 1
       ORDER BY CASE age_band WHEN '18-24' THEN 1 WHEN '25-34' THEN 2 WHEN '35+' THEN 3 WHEN '45-54' THEN 4 WHEN '55+' THEN 5 ELSE 99 END`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT label, learners FROM analytics.dashboard_disability_summary_mv ORDER BY learners DESC`)
+      : db.query(`
       SELECT CASE WHEN lower(trim(disability_status)) = 'yes' THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
              count(*)::int AS learners
       FROM (
@@ -87,9 +102,11 @@ export async function GET(req: NextRequest) {
       ) d
       WHERE d.disability_status IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT label, learners FROM analytics.dashboard_education_summary_mv ORDER BY learners DESC`)
+      : db.query(`
       SELECT education_level AS label, count(*)::int AS learners
       FROM (
         SELECT ${personKeySql("t")} AS person_key, nullif(trim(t.education_level), '') AS education_level
@@ -98,9 +115,11 @@ export async function GET(req: NextRequest) {
       ) d
       WHERE d.education_level IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT label, learners FROM analytics.dashboard_device_summary_mv ORDER BY learners DESC`)
+      : db.query(`
       SELECT CASE WHEN has_device THEN 'HAS DEVICE' ELSE 'NO DEVICE' END AS label,
              count(*)::int AS learners
       FROM (
@@ -112,8 +131,8 @@ export async function GET(req: NextRequest) {
       ) d
       WHERE d.has_device_known
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
-    )
+        params
+      )
   ]);
 
   const k = kpis.rows[0];

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
-import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import { readFilters, filterValues, filterSql, isUnfiltered } from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
 import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
 
@@ -13,16 +13,21 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
+  const useSummary = isUnfiltered(filters);
 
   const [stages, completion, completionTrend, cohorts, dailyActivity] = await Promise.all([
-    db.query(
-      `SELECT count(DISTINCT ${personKeySql("t")})::int AS registered,
+    useSummary
+      ? db.query(`SELECT registered, enrolled FROM analytics.dashboard_pipeline_summary_mv`)
+      : db.query(
+        `SELECT count(DISTINCT ${personKeySql("t")})::int AS registered,
               count(*)::int AS enrolled
        FROM ${PROGRAMME_TABLE} t
        WHERE t.source = 'Training' AND ${filterSql("t")}`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT records, avg_quiz, completed, first_date, last_date FROM analytics.dashboard_pipeline_summary_mv`)
+      : db.query(`
       SELECT count(*)::int AS records,
              round(avg(quiz_average), 1)::float AS avg_quiz,
              count(*) FILTER (WHERE pct_complete >= 100 OR completion_date IS NOT NULL)::int AS completed,
@@ -30,31 +35,37 @@ export async function GET(req: NextRequest) {
              max(completion_date)::text AS last_date
       FROM ${PROGRAMME_TABLE} t
       WHERE ${filterSql("t")} AND (t.pct_complete IS NOT NULL OR t.completion_date IS NOT NULL)`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT day, completions FROM analytics.dashboard_completion_trend_mv ORDER BY day`)
+      : db.query(`
       SELECT completion_date::text AS day, count(*)::int AS completions
       FROM ${PROGRAMME_TABLE} t
       WHERE ${filterSql("t")} AND completion_date IS NOT NULL
       GROUP BY 1 ORDER BY 1`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT cohort, learners, gender_known FROM analytics.dashboard_cohort_summary_mv ORDER BY learners DESC LIMIT 15`)
+      : db.query(`
       SELECT cohort, count(*)::int AS learners,
              count(*) FILTER (WHERE ${nonBlankSql("t.gender")})::int AS gender_known
       FROM ${PROGRAMME_TABLE} t
       WHERE ${filterSql("t")} AND ${nonBlankSql("t.cohort")}
       GROUP BY 1 ORDER BY learners DESC LIMIT 15`,
-      params
-    ),
-    db.query(
-      `SELECT t.date_trained::text AS day, count(*)::int AS enrolments,
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT day, enrolments, learners FROM analytics.dashboard_pipeline_daily_activity_mv ORDER BY day`)
+      : db.query(
+        `SELECT t.date_trained::text AS day, count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
        WHERE t.source = 'Training' AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 1`,
-      params
-    )
+        params
+      )
   ]);
 
   const comp = completion.rows[0];

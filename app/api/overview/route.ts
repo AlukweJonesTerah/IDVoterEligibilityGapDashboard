@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor, TARGET_TOTAL } from "@/lib/provenance";
-import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import { readFilters, filterValues, filterSql, isUnfiltered } from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
 import {
   ageBandSql,
@@ -24,10 +24,13 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
+  const useSummary = isUnfiltered(filters);
 
   const [totals, categories, countyMap, pool, age, disability, completion] = await Promise.all([
-    db.query(
-      `SELECT count(*)::int AS enrolments,
+    useSummary
+      ? db.query(`SELECT enrolments, unique_learners, counties, courses, first_date, last_date FROM analytics.dashboard_overview_summary_mv`)
+      : db.query(
+        `SELECT count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS unique_learners,
               count(DISTINCT kc.county_norm)::int AS counties,
               count(DISTINCT t.course_taken) FILTER (WHERE ${nonBlankSql("t.course_taken")})::int AS courses,
@@ -36,25 +39,34 @@ export async function GET(req: NextRequest) {
        FROM ${PROGRAMME_TABLE} t
        LEFT JOIN ${kenyaCountyValuesSql("kc")} ON kc.county_norm = regexp_replace(lower(coalesce(t.county, '')), '[^a-z0-9]+', '', 'g')
        WHERE ${filterSql("t")}`,
-      params
-    ),
-    db.query(
-      `SELECT t.course_category, count(*)::int AS enrolments
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT course_category, enrolments FROM analytics.dashboard_course_category_summary_mv ORDER BY enrolments DESC`)
+      : db.query(
+        `SELECT t.course_category, count(*)::int AS enrolments
        FROM ${PROGRAMME_TABLE} t
        WHERE t.source = 'Training' AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 2 DESC`,
-      params
-    ),
-    db.query(
-      `SELECT kc.county_name AS county_label,
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT county_label, learners FROM analytics.dashboard_county_summary_mv ORDER BY learners DESC`)
+      : db.query(
+        `SELECT kc.county_name AS county_label,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
        JOIN ${kenyaCountyValuesSql("kc")} ON kc.county_norm = regexp_replace(lower(coalesce(t.county, '')), '[^a-z0-9]+', '', 'g')
        WHERE ${filterSql("t")}
        GROUP BY kc.county_name ORDER BY 2 DESC`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`
+        SELECT unique_learners AS persons, gender_known, female, age_known, youth,
+               disability_known, pwd, device_known, with_device
+        FROM analytics.dashboard_overview_summary_mv`)
+      : db.query(`
       SELECT count(*)::int AS persons,
              count(gender)::int AS gender_known,
              count(*) FILTER (WHERE lower(trim(gender)) = 'female')::int AS female,
@@ -78,9 +90,14 @@ export async function GET(req: NextRequest) {
           CASE WHEN ${nonBlankSql("t.gender")} THEN 0 ELSE 1 END,
           CASE WHEN ${nonBlankSql("t.age_group")} THEN 0 ELSE 1 END
       ) d`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`
+        SELECT label, learners
+        FROM analytics.dashboard_age_summary_mv
+        ORDER BY CASE label WHEN '18-24' THEN 1 WHEN '25-34' THEN 2 WHEN '35+' THEN 3 WHEN '45-54' THEN 4 WHEN '55+' THEN 5 ELSE 99 END`)
+      : db.query(`
       SELECT age_band AS label, count(*)::int AS learners
       FROM (
         SELECT ${personKeySql("t")} AS person_key, ${ageBandSql("t.age_group")} AS age_band
@@ -90,9 +107,11 @@ export async function GET(req: NextRequest) {
       WHERE d.age_band IS NOT NULL
       GROUP BY 1
       ORDER BY CASE age_band WHEN '18-24' THEN 1 WHEN '25-34' THEN 2 WHEN '35+' THEN 3 WHEN '45-54' THEN 4 WHEN '55+' THEN 5 ELSE 99 END`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT label, learners FROM analytics.dashboard_disability_summary_mv ORDER BY learners DESC`)
+      : db.query(`
       SELECT CASE WHEN lower(trim(disability_status)) = 'yes' THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
              count(*)::int AS learners
       FROM (
@@ -102,15 +121,17 @@ export async function GET(req: NextRequest) {
       ) d
       WHERE d.disability_status IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      params
-    ),
-    db.query(`
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT completion_records AS records, avg_quiz, completed FROM analytics.dashboard_overview_summary_mv`)
+      : db.query(`
       SELECT count(*)::int AS records,
              round(avg(quiz_average), 1)::float AS avg_quiz,
              count(*) FILTER (WHERE pct_complete >= 100 OR completion_date IS NOT NULL)::int AS completed
       FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")} AND (t.pct_complete IS NOT NULL OR t.completion_date IS NOT NULL)`,
-      params
-    )
+        params
+      )
   ]);
 
   const t = totals.rows[0];

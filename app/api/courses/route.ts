@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
-import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import { readFilters, filterValues, filterSql, isUnfiltered } from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
 import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
 
@@ -13,35 +13,45 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
+  const useSummary = isUnfiltered(filters);
 
   const [courses, categories, sourceRecords] = await Promise.all([
-    db.query(
-      `SELECT t.course_taken AS course, t.course_category AS category,
+    useSummary
+      ? db.query(`SELECT course, category, enrolments, learners FROM analytics.dashboard_course_summary_mv ORDER BY enrolments DESC`)
+      : db.query(
+        `SELECT t.course_taken AS course, t.course_category AS category,
               count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
        WHERE t.source = 'Training' AND ${filterSql("t")}
        GROUP BY t.course_taken, t.course_category
        ORDER BY enrolments DESC`,
-      params
-    ),
-    db.query(
-      `SELECT t.course_category AS category, count(*)::int AS enrolments,
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT category, enrolments, learners FROM analytics.dashboard_course_category_summary_mv ORDER BY enrolments DESC`)
+      : db.query(
+        `SELECT t.course_category AS category, count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
        WHERE t.source = 'Training' AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 2 DESC`,
-      params
-    ),
-    db.query(
-      `SELECT count(*)::int AS total,
+        params
+      ),
+    useSummary
+      ? db.query(`
+        SELECT enrolments AS total, source_gender_known AS gender_known,
+               sources, courses
+        FROM analytics.dashboard_overview_summary_mv`)
+      : db.query(
+        `SELECT count(*)::int AS total,
               count(*) FILTER (WHERE ${nonBlankSql("t.gender")})::int AS gender_known,
               count(DISTINCT t.source)::int AS sources,
               count(DISTINCT t.course_taken) FILTER (WHERE ${nonBlankSql("t.course_taken")})::int AS courses
        FROM ${PROGRAMME_TABLE} t
        WHERE ${filterSql("t")}`,
-      params
-    )
+        params
+      )
   ]);
 
   const source = sourceRecords.rows[0];

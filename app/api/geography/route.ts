@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
-import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
+import { readFilters, filterValues, filterSql, isUnfiltered } from "@/lib/filters-server";
 import { kenyaCountyValuesSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +15,13 @@ export async function GET(req: NextRequest) {
   // county filter drives the drilldown instead of collapsing the page.
   const params = filterValues({ ...filters, county: null });
   const drillCounty = req.nextUrl.searchParams.get("county") || filters.county;
+  const useSummary = isUnfiltered(filters) && !drillCounty;
 
   const [byCounty, regionDrill] = await Promise.all([
-    db.query(
-      `SELECT kc.county_name AS county,
+    useSummary
+      ? db.query(`SELECT county, county_label, learners, enrolments, population, per_100k FROM analytics.dashboard_county_summary_mv ORDER BY learners DESC`)
+      : db.query(
+        `SELECT kc.county_name AS county,
               kc.county_name AS county_label,
               count(DISTINCT ${personKeySql("t")})::int AS learners,
               count(*)::int AS enrolments,
@@ -29,8 +32,8 @@ export async function GET(req: NextRequest) {
        WHERE ${filterSql("t")}
        GROUP BY kc.county_name
        ORDER BY learners DESC`,
-      params
-    ),
+        params
+      ),
     drillCounty
       ? db.query(
           `SELECT coalesce(nullif(trim(t.region), ''), nullif(trim(t.sub_county), ''), 'Unknown') AS region,

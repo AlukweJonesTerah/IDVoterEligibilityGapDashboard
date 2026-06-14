@@ -25,6 +25,10 @@ export function readFilters(req: NextRequest): Filters {
 
 export const filterValues = (f: Filters) => [f.county, f.category, f.from, f.to];
 
+export function isUnfiltered(f: Filters) {
+  return !f.county && !f.category && !f.from && !f.to;
+}
+
 /**
  * WHERE fragment applying the global filters to a table alias that has
  * county, course_category and date_trained columns ($1..$4).

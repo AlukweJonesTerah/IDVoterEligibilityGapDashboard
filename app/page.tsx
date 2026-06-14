@@ -7,8 +7,90 @@ import { EChart } from "@/components/charts/EChart";
 import { KenyaMap } from "@/components/charts/KenyaMap";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
 import { useFilters } from "@/components/dashboard/FilterContext";
-import { chartMotion, chartPalette, axisStyle, donutOption, rankedBarOption } from "@/lib/charts/motion";
+import { chartMotion, chartPalette, axisStyle, donutOption } from "@/lib/charts/motion";
 import { fmt, fmtCompact, fmtPct, labelCase } from "@/lib/format";
+
+type RankedRow = {
+  label: string;
+  value: number;
+  color?: string;
+};
+
+function RankedList({
+  rows,
+  color = "#101820",
+  maxRows = 10
+}: {
+  rows: RankedRow[];
+  color?: string;
+  maxRows?: number;
+}) {
+  const shown = rows.slice(0, maxRows);
+  const max = Math.max(...shown.map((row) => row.value), 1);
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {shown.map((row) => (
+        <div key={row.label} className="min-w-0">
+          <div className="mb-1 flex items-baseline justify-between gap-3 text-[11px]">
+            <span className="truncate text-subink" title={row.label}>
+              {row.label}
+            </span>
+            <span className="tnum shrink-0 font-semibold text-ink">{fmt(row.value)}</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-sm bg-hair2">
+            <div
+              className="h-full rounded-sm"
+              style={{ width: `${Math.max(2, (row.value / max) * 100)}%`, backgroundColor: row.color ?? color }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RankTable({ rows, startRank = 1 }: { rows: RankedRow[]; startRank?: number }) {
+  return (
+    <ol className="flex flex-col">
+      {rows.map((row, i) => (
+        <li
+          key={row.label}
+          className="flex items-center gap-3 border-b border-hair2 py-[7px] last:border-0"
+        >
+          <span className="tnum w-5 shrink-0 text-center text-[11px] font-semibold text-mute">
+            {startRank + i}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[12px] text-ink" title={row.label}>
+            {row.label}
+          </span>
+          <span className="tnum shrink-0 text-[12px] font-semibold text-ink">{fmt(row.value)}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function StackedBar({ segments }: { segments: { label: string; value: number; color: string }[] }) {
+  const total = segments.reduce((sum, s) => sum + s.value, 0) || 1;
+  return (
+    <div>
+      <div className="flex h-6 w-full overflow-hidden rounded-sm">
+        {segments.map((s) => (
+          <div key={s.label} style={{ width: `${(s.value / total) * 100}%`, backgroundColor: s.color }} />
+        ))}
+      </div>
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-subink">
+        {segments.map((s) => (
+          <span key={s.label} className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+            {s.label} · {Math.round((s.value / total) * 100)}%
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ExecutiveOverview() {
   const { widgets: w, error } = useDashboardData("/api/overview");
@@ -27,16 +109,9 @@ export default function ExecutiveOverview() {
       ) : (
         <>
           {/* Row 1: core programme progress */}
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <Kpi
-              label="Unique people"
-              help="Distinct people in the combined source, deduplicated using available national ID, phone, email, survey UUID and record ID values."
-              value={fmt(w.headline.data.uniqueLearners)}
-              sub="deduplicated across source streams"
-              provenance={w.headline.provenance}
-            />
-            <Kpi
-              label="Source records"
+              label="Total Learners"
               help="All rows in the combined 20 million by 2032 source table in the current filter scope."
               value={fmt(w.headline.data.enrolments)}
               sub="all combined-source rows"
@@ -45,8 +120,8 @@ export default function ExecutiveOverview() {
             <Kpi
               label="Progress to 20M"
               help="Unique learners as a share of the national target of 20 million Kenyans skilled by 2032."
-              value={fmtPct(w.headline.data.progressPct)}
-              sub={`${fmtCompact(w.headline.data.uniqueLearners)} of ${fmtCompact(w.headline.data.target)} people`}
+              value={`${fmtCompact(w.headline.data.uniqueLearners)} of ${fmtCompact(w.headline.data.target)}`}
+              sub={`${fmt(w.headline.data.uniqueLearners)} deduplicated people toward target`}
               provenance={w.headline.provenance}
             />
             <Kpi
@@ -56,13 +131,18 @@ export default function ExecutiveOverview() {
               sub="counties in current scope"
               provenance={w.headline.provenance}
             />
-          </section>
-
-          {/* Row 2: inclusion highlights. Each card's popup states its own coverage. */}
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-            <Kpi compact label="Female participation" help="Share female among pooled records with a known gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={incProv(`Gender known for ${fmt(w.inclusion.data.gender_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
-            <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group." value={fmtPct(w.inclusion.data.youth_rate)} provenance={incProv(`Age group known for ${fmt(w.inclusion.data.age_known)} of ${fmt(w.inclusion.data.persons)} pooled records. Bands harmonized from inconsistent source buckets into standard ranges.`)} />
-            <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response." value={fmt(w.inclusion.data.pwd_learners)} provenance={incProv(`Disability response recorded for ${fmt(w.inclusion.data.disability_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
+            <Kpi
+              label="Youth (18-34)"
+              help="Share aged 18 to 34 among pooled records with a known age group."
+              value={fmtPct(w.inclusion.data.youth_rate)}
+              provenance={incProv(`Age group known for ${fmt(w.inclusion.data.age_known)} of ${fmt(w.inclusion.data.persons)} pooled records. Bands harmonized from inconsistent source buckets into standard ranges.`)}
+            />
+            <Kpi
+              label="Persons with disability"
+              help="Pooled records reporting a disability, of those with a disability response."
+              value={w.inclusion.data.disability_known > 0 ? fmt(w.inclusion.data.pwd_learners) : "—"}
+              provenance={incProv(`Disability response recorded for ${fmt(w.inclusion.data.disability_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)}
+            />
           </section>
 
           {/* Main visual area: map + demographic highlights */}
@@ -124,31 +204,50 @@ export default function ExecutiveOverview() {
             </Widget>
           </section>
 
-          {/* Lower summary area */}
-          <section className="grid gap-4 lg:grid-cols-4">
-            <Widget title="Top 5 counties" help="Counties with the most unique learners. The full ranking is on the Geographic Coverage tab." provenance={w.countyMap.provenance}>
-              <EChart
-                height={230}
-                option={rankedBarOption(
-                  w.countyMap.data.slice(0, 5).map((d: { county_label: string }) => d.county_label),
-                  w.countyMap.data.slice(0, 5).map((d: { learners: number }) => d.learners),
-                  "#ED1C24"
-                )}
-              />
+          {/* County league table + course-category mix */}
+          <section className="grid gap-4 lg:grid-cols-3">
+            <Widget
+              className="lg:col-span-2"
+              title="County rankings"
+              help="Counties ranked by unique learners in the current filter scope. Most reached on the left, least reached on the right."
+              provenance={w.countyMap.provenance}
+            >
+              <div className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-icta-redDeep">
+                    Most reached
+                  </div>
+                  <RankTable
+                    rows={w.countyMap.data.slice(0, 5).map((d: { county_label: string; learners: number }) => ({
+                      label: d.county_label,
+                      value: d.learners
+                    }))}
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mute">
+                    Least reached
+                  </div>
+                  <RankTable
+                    startRank={Math.max(1, w.countyMap.data.length - 4)}
+                    rows={w.countyMap.data
+                      .slice(-5)
+                      .map((d: { county_label: string; learners: number }) => ({
+                        label: d.county_label,
+                        value: d.learners
+                      }))}
+                  />
+                </div>
+              </div>
             </Widget>
-            <Widget title="Bottom 5 counties" help="Counties with the fewest unique learners, where reach needs the most attention." provenance={w.countyMap.provenance}>
+            <Widget
+              title="Course categories"
+              help="Share of training-stream enrolments across the course categories."
+              provenance={w.categories.provenance}
+            >
               <EChart
-                height={230}
-                option={rankedBarOption(
-                  w.countyMap.data.slice(-5).reverse().map((d: { county_label: string }) => d.county_label),
-                  w.countyMap.data.slice(-5).reverse().map((d: { learners: number }) => d.learners),
-                  "#6D6E6F"
-                )}
-              />
-            </Widget>
-            <Widget title="Course categories" help="How enrolments split across the course categories." provenance={w.categories.provenance}>
-              <EChart
-                height={230}
+                height={300}
+                mobileHeight={250}
                 option={donutOption(
                   w.categories.data.map((d: { course_category: string; enrolments: number }) => ({
                     name: labelCase(d.course_category),
@@ -158,21 +257,63 @@ export default function ExecutiveOverview() {
                 )}
               />
             </Widget>
-            <Widget title="Gender split" help="Pooled records with a known gender." provenance={w.genderSplit.provenance}>
-              {w.genderSplit.data.some((d: { learners: number }) => d.learners > 0) ? (
-                <EChart
-                  height={230}
-                  option={donutOption(
-                    w.genderSplit.data.map((d: { gender: string; learners: number }) => ({
-                      name: labelCase(d.gender),
-                      value: d.learners
-                    })),
-                    chartPalette
+          </section>
+
+          {/* Course leaderboard + learner profile */}
+          <section className="grid gap-4 lg:grid-cols-3">
+            <Widget
+              className="lg:col-span-2"
+              title={`Course leaderboard (${fmt(w.headline.data.courses)})`}
+              help="Top courses by training-stream enrolments in the current filter scope."
+              provenance={w.courseLeaderboard.provenance}
+            >
+              <RankedList
+                maxRows={10}
+                color="#ED1C24"
+                rows={w.courseLeaderboard.data
+                  .slice(0, 10)
+                  .map((d: { course: string | null; enrolments: number }) => ({
+                    label: labelCase(d.course ?? "Unspecified"),
+                    value: d.enrolments
+                  }))}
+              />
+            </Widget>
+            <Widget
+              title="Learner profile"
+              help="Gender split and reported education level, from the partial demographic source pool."
+              provenance={w.education.provenance}
+            >
+              <div className="space-y-5">
+                <div>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-mute">Gender split</div>
+                  {w.genderSplit.data.some((d: { learners: number }) => d.learners > 0) ? (
+                    <StackedBar
+                      segments={w.genderSplit.data.map((d: { gender: string; learners: number }, index: number) => ({
+                        label: labelCase(d.gender),
+                        value: d.learners,
+                        color: index === 0 ? "#101820" : "#ED1C24"
+                      }))}
+                    />
+                  ) : (
+                    <p className="text-[11px] text-mute">No gender records for the current filter.</p>
                   )}
-                />
-              ) : (
-                <UnavailableNote reason="No gender records are available for the current county filter in the partial demographic source pool." />
-              )}
+                </div>
+                <div>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-mute">Education level</div>
+                  {w.education.data.length ? (
+                    <RankedList
+                      maxRows={6}
+                      color="#6D6E6F"
+                      rows={w.education.data.map((d: { label: string; learners: number }) => ({
+                        label: labelCase(d.label),
+                        value: d.learners
+                      }))}
+                    />
+                  ) : (
+                    <p className="text-[11px] text-mute">No education-level records for the current filter.</p>
+                  )}
+                </div>
+              </div>
             </Widget>
           </section>
         </>

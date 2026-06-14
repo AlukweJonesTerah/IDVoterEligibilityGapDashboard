@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
@@ -7,6 +8,7 @@ import { kenyaCountyValuesSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TA
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  return cachedJson(req, "geography", async () => {
   const registry = await getRegistry();
   const filters = readFilters(req);
   // The county map and table always show all counties in scope; the global
@@ -44,7 +46,7 @@ export async function GET(req: NextRequest) {
       : Promise.resolve(null)
   ]);
 
-  return NextResponse.json({
+  return {
     widgets: {
       counties: {
         data: byCounty.rows,
@@ -61,5 +63,6 @@ export async function GET(req: NextRequest) {
           }
         : {})
     }
+  };
   });
 }

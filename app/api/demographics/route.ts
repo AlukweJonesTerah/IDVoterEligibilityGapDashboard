@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { fmt } from "@/lib/format";
@@ -18,6 +19,7 @@ const POOL_NOTE =
   "From analytics.20_million_by_2032. Coverage varies by field because not every source stream carries every demographic value.";
 
 export async function GET(req: NextRequest) {
+  return cachedJson(req, "demographics", async () => {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
@@ -123,7 +125,7 @@ export async function GET(req: NextRequest) {
       note: POOL_NOTE
     });
 
-  return NextResponse.json({
+  return {
     widgets: {
       kpis: {
         data: {
@@ -181,5 +183,6 @@ export async function GET(req: NextRequest) {
         })
       }
     }
+  };
   });
 }

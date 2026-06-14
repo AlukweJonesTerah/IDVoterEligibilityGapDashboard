@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
@@ -8,6 +9,7 @@ import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } fro
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  return cachedJson(req, "pipeline", async () => {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
@@ -57,7 +59,7 @@ export async function GET(req: NextRequest) {
 
   const comp = completion.rows[0];
 
-  return NextResponse.json({
+  return {
     widgets: {
       funnel: {
         data: {
@@ -101,5 +103,6 @@ export async function GET(req: NextRequest) {
         })
       }
     }
+  };
   });
 }

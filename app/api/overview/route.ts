@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor, TARGET_TOTAL } from "@/lib/provenance";
 import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
@@ -19,6 +20,7 @@ const TABLE_NOTE =
   "From analytics.20_million_by_2032, the combined source covering Training, Citizens and KICTANET streams. Course and date filters only apply where those fields exist.";
 
 export async function GET(req: NextRequest) {
+  return cachedJson(req, "overview", async () => {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
@@ -122,7 +124,7 @@ export async function GET(req: NextRequest) {
       note: TABLE_NOTE
     });
 
-  return NextResponse.json({
+  return {
     widgets: {
       headline: {
         data: {
@@ -200,5 +202,6 @@ export async function GET(req: NextRequest) {
         })
       }
     }
+  };
   });
 }

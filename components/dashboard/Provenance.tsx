@@ -68,7 +68,7 @@ export function ProvenanceLegend() {
 /** Card body for metrics the current source data cannot support. */
 export function UnavailableNote({ reason }: { reason: string }) {
   return (
-    <div className="flex h-full min-h-[120px] flex-col items-center justify-center gap-1 rounded border border-dashed border-hair2 bg-paper px-6 py-8 text-center">
+    <div className="flex min-h-[120px] w-full flex-col items-center justify-center gap-1 overflow-hidden rounded border border-dashed border-hair2 bg-paper px-4 py-6 text-center">
       <span className="text-sm font-medium text-subink">Not available in current source data</span>
       <span className="max-w-sm text-xs leading-5 text-mute">{reason}</span>
     </div>

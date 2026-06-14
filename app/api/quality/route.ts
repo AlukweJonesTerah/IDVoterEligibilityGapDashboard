@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { kenyaCountyValuesSql, nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  return cachedJson(req, "quality", async () => {
   const registry = await getRegistry();
 
   const [metrics, placeholders, registryRows] = await Promise.all([
@@ -93,7 +95,7 @@ export async function GET() {
   const missRate = (m.missing_county + m.missing_id) / (m.total_rows * 2);
   const score = Math.round(100 - dupRate * 100 * 0.5 - missRate * 100);
 
-  return NextResponse.json({
+  return {
     widgets: {
       metrics: {
         data: { ...m, duplicate_rate: Number((dupRate * 100).toFixed(2)), quality_score: score },
@@ -112,5 +114,6 @@ export async function GET() {
         })
       }
     }
+  };
   });
 }

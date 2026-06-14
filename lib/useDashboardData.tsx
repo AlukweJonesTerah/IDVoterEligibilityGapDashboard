@@ -9,6 +9,8 @@ export interface Widgets {
   [name: string]: { data: any; provenance: Provenance };
 }
 
+const clientCache = new Map<string, Widgets>();
+
 export function useDashboardData(endpoint: string) {
   const { queryString } = useFilters();
   const url = queryString ? `${endpoint}${endpoint.includes("?") ? "&" : "?"}${queryString}` : endpoint;
@@ -18,6 +20,13 @@ export function useDashboardData(endpoint: string) {
 
   useEffect(() => {
     let cancelled = false;
+    const cached = clientCache.get(url);
+    if (cached) {
+      setWidgets(cached);
+      setError(null);
+    } else {
+      setWidgets(null);
+    }
     fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`${url} responded ${r.status}`);
@@ -25,6 +34,7 @@ export function useDashboardData(endpoint: string) {
       })
       .then((json) => {
         if (!cancelled) {
+          clientCache.set(url, json.widgets);
           setWidgets(json.widgets);
           setError(null);
         }

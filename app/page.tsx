@@ -27,7 +27,7 @@ export default function ExecutiveOverview() {
       ) : (
         <>
           {/* Row 1: core programme progress */}
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
               label="Unique people"
               help="Distinct people in the combined source, deduplicated using available national ID, phone, email, survey UUID and record ID values."
@@ -56,20 +56,13 @@ export default function ExecutiveOverview() {
               sub="counties in current scope"
               provenance={w.headline.provenance}
             />
-            <Kpi
-              label="Completion rate"
-              help="A national completion rate cannot be computed yet: only a small pilot slice of actual completion records is loaded. No modeled estimate is shown. Hover the source dot for the record count."
-              value="Not yet measured"
-              provenance={w.completion.provenance}
-            />
           </section>
 
           {/* Row 2: inclusion highlights. Each card's popup states its own coverage. */}
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             <Kpi compact label="Female participation" help="Share female among pooled records with a known gender." value={fmtPct(w.inclusion.data.female_rate)} provenance={incProv(`Gender known for ${fmt(w.inclusion.data.gender_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
             <Kpi compact label="Youth (18-34)" help="Share aged 18 to 34 among pooled records with a known age group." value={fmtPct(w.inclusion.data.youth_rate)} provenance={incProv(`Age group known for ${fmt(w.inclusion.data.age_known)} of ${fmt(w.inclusion.data.persons)} pooled records. Bands harmonized from inconsistent source buckets into standard ranges.`)} />
             <Kpi compact label="Persons with disability" help="Pooled records reporting a disability, of those with a disability response." value={fmt(w.inclusion.data.pwd_learners)} provenance={incProv(`Disability response recorded for ${fmt(w.inclusion.data.disability_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)} />
-            <Kpi compact label="Device access" help="Device availability is recorded only for the Busia pilot records; this is not a national measure." value={fmtPct(w.inclusion.data.device_rate)} provenance={incProv(`Device availability recorded for ${fmt(w.inclusion.data.device_known)} records (Busia pilot only).`)} />
           </section>
 
           {/* Main visual area: map + demographic highlights */}

@@ -7,10 +7,7 @@ import { ProvenanceLegend } from "./Provenance";
 import { FilterBar } from "./FilterBar";
 
 const PAGES = [
-  { href: "/", label: "Executive Overview" },
-  { href: "/courses", label: "Courses & Pipeline" },
-  { href: "/geography", label: "Geographic Coverage" },
-  { href: "/demographics", label: "Demographics & Inclusion" }
+  { href: "/", label: "Executive Overview" }
 ];
 
 export function PageShell({

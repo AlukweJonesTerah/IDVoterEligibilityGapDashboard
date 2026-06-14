@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const params = filterValues(filters);
   const useSummary = isUnfiltered(filters);
 
-  const [totals, categories, countyMap, pool, age, disability, completion] = await Promise.all([
+  const [totals, categories, courseLeaderboard, countyMap, pool, age, disability, education, completion] = await Promise.all([
     useSummary
       ? db.query(`SELECT enrolments, unique_learners, counties, courses, first_date, last_date FROM analytics.dashboard_overview_summary_mv`)
       : db.query(
@@ -51,6 +51,18 @@ export async function GET(req: NextRequest) {
         params
       ),
     useSummary
+      ? db.query(`SELECT course, category, enrolments, learners FROM analytics.dashboard_course_summary_mv ORDER BY enrolments DESC`)
+      : db.query(
+        `SELECT t.course_taken AS course, t.course_category AS category,
+              count(*)::int AS enrolments,
+              count(DISTINCT ${personKeySql("t")})::int AS learners
+       FROM ${PROGRAMME_TABLE} t
+       WHERE t.source = 'Training' AND ${filterSql("t")}
+       GROUP BY t.course_taken, t.course_category
+       ORDER BY enrolments DESC`,
+        params
+      ),
+    useSummary
       ? db.query(`SELECT county_label, learners FROM analytics.dashboard_county_summary_mv ORDER BY learners DESC`)
       : db.query(
         `SELECT kc.county_name AS county_label,
@@ -64,7 +76,7 @@ export async function GET(req: NextRequest) {
     useSummary
       ? db.query(`
         SELECT unique_learners AS persons, gender_known, female, age_known, youth,
-               disability_known, pwd, device_known, with_device
+               disability_known, pwd, device_known, with_device, education_known
         FROM analytics.dashboard_overview_summary_mv`)
       : db.query(`
       SELECT count(*)::int AS persons,
@@ -75,7 +87,8 @@ export async function GET(req: NextRequest) {
              count(disability_status)::int AS disability_known,
              count(*) FILTER (WHERE lower(trim(disability_status)) = 'yes')::int AS pwd,
              count(*) FILTER (WHERE has_device_known)::int AS device_known,
-             count(*) FILTER (WHERE has_device_known AND has_device)::int AS with_device
+             count(*) FILTER (WHERE has_device_known AND has_device)::int AS with_device,
+             count(education_level)::int AS education_known
       FROM (
         SELECT DISTINCT ON (${personKeySql("t")})
                ${personKeySql("t")} AS person_key,
@@ -83,12 +96,14 @@ export async function GET(req: NextRequest) {
                ${ageBandSql("t.age_group")} AS age_band,
                nullif(trim(t.disability_status), '') AS disability_status,
                (${hasDeviceSql("t")}) AS has_device,
-               (${nonBlankSql("t.has_device")} OR ${nonBlankSql("t.device_used")} OR ${nonBlankSql("t.device_type")}) AS has_device_known
+               (${nonBlankSql("t.has_device")} OR ${nonBlankSql("t.device_used")} OR ${nonBlankSql("t.device_type")}) AS has_device_known,
+               nullif(trim(t.education_level), '') AS education_level
         FROM ${PROGRAMME_TABLE} t
         WHERE ${filterSql("t")}
         ORDER BY ${personKeySql("t")},
           CASE WHEN ${nonBlankSql("t.gender")} THEN 0 ELSE 1 END,
-          CASE WHEN ${nonBlankSql("t.age_group")} THEN 0 ELSE 1 END
+          CASE WHEN ${nonBlankSql("t.age_group")} THEN 0 ELSE 1 END,
+          CASE WHEN ${nonBlankSql("t.education_level")} THEN 0 ELSE 1 END
       ) d`,
         params
       ),
@@ -120,6 +135,19 @@ export async function GET(req: NextRequest) {
         GROUP BY 1, 2
       ) d
       WHERE d.disability_status IS NOT NULL
+      GROUP BY 1 ORDER BY 2 DESC`,
+        params
+      ),
+    useSummary
+      ? db.query(`SELECT label, learners FROM analytics.dashboard_education_summary_mv ORDER BY learners DESC`)
+      : db.query(`
+      SELECT education_level AS label, count(*)::int AS learners
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key, nullif(trim(t.education_level), '') AS education_level
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2
+      ) d
+      WHERE d.education_level IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
         params
       ),
@@ -166,6 +194,12 @@ export async function GET(req: NextRequest) {
           note: "Course categories come from the Training stream inside the combined source table."
         })
       },
+      courseLeaderboard: {
+        data: courseLeaderboard.rows,
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
+          note: "Course enrolments and learners are scoped to source = Training within analytics.20_million_by_2032."
+        })
+      },
       countyMap: {
         data: countyMap.rows,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], { note: TABLE_NOTE })
@@ -181,6 +215,7 @@ export async function GET(req: NextRequest) {
           age_known: p.age_known,
           disability_known: p.disability_known,
           device_known: p.device_known,
+          education_known: p.education_known,
           persons: p.persons
         },
         provenance: partialPool(
@@ -208,6 +243,12 @@ export async function GET(req: NextRequest) {
         data: disability.rows,
         provenance: partialPool(
           `Disability response recorded for ${fmt(p.disability_known)} of ${fmt(p.persons)} pooled records.`
+        )
+      },
+      education: {
+        data: education.rows,
+        provenance: partialPool(
+          `Education level known for ${fmt(p.education_known)} of ${fmt(p.persons)} pooled records.`
         )
       },
       completion: {

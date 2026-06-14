@@ -69,7 +69,7 @@ export function rankedBarOption(
   names: string[],
   values: number[],
   color: string,
-  opts: { pct?: boolean } = {}
+  opts: { pct?: boolean; valueLabels?: boolean } = {}
 ): Record<string, unknown> {
   return {
     ...rankedBarMotion,
@@ -93,6 +93,18 @@ export function rankedBarOption(
         type: "bar",
         barWidth: 12,
         itemStyle: { color, borderRadius: [0, 2, 2, 0] },
+        ...(opts.valueLabels
+          ? {
+              label: {
+                show: true,
+                position: "right",
+                color: "#3A4856",
+                fontSize: 11,
+                formatter: ({ value }: { value: number }) =>
+                  opts.pct ? `${value}%` : new Intl.NumberFormat("en-US").format(value)
+              }
+            }
+          : {}),
         data: values
       }
     ]

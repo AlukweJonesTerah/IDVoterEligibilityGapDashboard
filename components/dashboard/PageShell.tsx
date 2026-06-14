@@ -78,7 +78,15 @@ export function PageShell({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <ProvenanceLegend />
               <div className="text-xs font-medium text-mute sm:text-right">
-                Portal built by <span className="font-semibold text-subink">Pathways Technologies</span>
+                Portal built by{" "}
+                <a
+                  href="https://pathwaystechnologies.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-subink underline-offset-2 hover:text-icta-red hover:underline"
+                >
+                  Pathways Technologies
+                </a>
               </div>
             </div>
           </footer>

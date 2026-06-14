@@ -35,19 +35,19 @@ export default function CoursesAndPipelinePage() {
   const top = courses[0];
 
   return (
-    <PageShell
+      <PageShell
       title="Course Performance & Training Pipeline"
-      subtitle="What learners take, plus registration intake and the completion data received so far. All figures come from live source data."
+      subtitle="What learners take in the Training stream, plus completion fields received so far from the combined live source."
     >
       {/* Summary cards */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Courses offered" help="Number of distinct courses with enrolments in the current scope." value={String(courses.length)} provenance={c.courses.provenance} />
         <Kpi label="Most popular" help="Course with the most enrolments." value={labelCase(top?.course)} sub={`${fmt(top?.enrolments)} enrolments`} provenance={c.courses.provenance} />
         <Kpi
-          label="Registrations received"
-          help="Intake records from the registration source. There is no shared learner key to the training table, so this is a separate measure and is never added to trained learners."
+          label="Combined source records"
+          help="All records in the combined 20 million by 2032 source table for the current filter scope."
           value={fmt(c.registrations.data.total)}
-          sub="intake; separate from trained learners"
+          sub="Training, Citizens and KICTANET streams"
           provenance={c.registrations.provenance}
         />
         <Kpi

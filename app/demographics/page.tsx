@@ -17,7 +17,7 @@ export default function DemographicsPage() {
   return (
     <PageShell
       title="Demographics & Inclusion"
-      subtitle="Participation by gender, age, disability and education, from the live records that carry demographic data. Coverage is partial; hover any dot for the honest denominator."
+      subtitle="Participation by gender, age, disability and education from the combined live source. Coverage varies by field; hover any dot for the honest denominator."
     >
       {!w ? (
         <LoadingBlock error={error} />
@@ -44,9 +44,9 @@ export default function DemographicsPage() {
             />
             <Kpi
               label="Device access"
-              help="Device availability is recorded only for the Busia pilot records; not a national measure."
+              help="Device availability from records that contain device fields in the combined source."
               value={fmtPct(w.kpis.data.device_rate)}
-              provenance={kpiProv(`Device availability recorded for ${fmt(w.kpis.data.device_known)} records (Busia pilot only).`)}
+              provenance={kpiProv(`Device availability recorded for ${fmt(w.kpis.data.device_known)} of ${fmt(w.kpis.data.persons)} pooled records.`)}
             />
           </section>
 
@@ -136,8 +136,8 @@ export default function DemographicsPage() {
               )}
             </Widget>
             <Widget
-              title="Device availability (Busia pilot)"
-              help="Device availability from the Busia pilot records only; not a national measure."
+              title="Device availability"
+              help="Device availability where recorded in the combined source."
               provenance={w.device.provenance}
             >
               {w.device.data.length ? (
@@ -153,15 +153,15 @@ export default function DemographicsPage() {
                   )}
                 />
               ) : (
-                <UnavailableNote reason="No device records are available for the current county filter. Device availability is only present in the Busia pilot source." />
+                <UnavailableNote reason="No device records are available for the current filter." />
               )}
             </Widget>
             <Widget
               title="Employment status"
-              help="Employment status comes from the learner baseline dataset."
+              help="Employment status exists in the combined source but is not yet visualized in this MVP page."
               provenance={w.employment.provenance}
             >
-              <UnavailableNote reason="The learner baseline dataset exists in the live database but has no rows yet. Employment, income and impact measures will appear when it is populated." />
+              <UnavailableNote reason="Employment, income and impact measures are available for future visuals after the core source migration is validated." />
             </Widget>
           </section>
         </>

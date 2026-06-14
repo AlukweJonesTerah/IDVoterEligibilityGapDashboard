@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
+import { kenyaCountyValuesSql, nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
@@ -10,42 +11,80 @@ export async function GET() {
   const [metrics, placeholders, registryRows] = await Promise.all([
     db.query(`
       WITH dups AS (
-        SELECT unique_id, count(*) AS n FROM analytics.icta_training_data
-        GROUP BY unique_id HAVING count(*) > 1
+        SELECT ${personKeySql("t")} AS person_key, count(*) AS n
+        FROM ${PROGRAMME_TABLE} t
+        GROUP BY 1 HAVING count(*) > 1
       )
-      SELECT (SELECT count(*) FROM analytics.icta_training_data)::int AS total_rows,
-             (SELECT count(DISTINCT unique_id) FROM analytics.icta_training_data)::int AS unique_learners,
+      SELECT (SELECT count(*) FROM ${PROGRAMME_TABLE})::int AS total_rows,
+             (SELECT count(DISTINCT ${personKeySql("t")}) FROM ${PROGRAMME_TABLE} t)::int AS unique_learners,
              (SELECT count(*) FROM dups)::int AS duplicate_ids,
              (SELECT coalesce(sum(n), 0) FROM dups)::int AS rows_on_duplicate_ids,
-             (SELECT count(*) FROM analytics.icta_training_data WHERE county IS NULL OR county = '')::int AS missing_county,
-             (SELECT count(*) FROM analytics.icta_training_data WHERE unique_id IS NULL OR unique_id = '')::int AS missing_id`),
+             (SELECT count(*)
+              FROM ${PROGRAMME_TABLE} t
+              LEFT JOIN ${kenyaCountyValuesSql("kc")} ON kc.county_norm = regexp_replace(lower(coalesce(t.county, '')), '[^a-z0-9]+', '', 'g')
+              WHERE NOT (${nonBlankSql("t.county")}) OR kc.county_norm IS NULL)::int AS missing_county,
+             (SELECT count(*) FROM ${PROGRAMME_TABLE} t
+              WHERE NOT (${nonBlankSql("t.national_id")})
+                AND NOT (${nonBlankSql("t.phone_number")})
+                AND NOT (${nonBlankSql("t.email")})
+                AND NOT (${nonBlankSql("t.survey_uuid")}))::int AS missing_id`),
     db.query(`
       SELECT 'institution' AS field, count(DISTINCT institution)::int AS distinct_values,
-             max(institution) AS dominant_value FROM analytics.icta_training_data
+             max(institution) AS dominant_value FROM ${PROGRAMME_TABLE}
       UNION ALL
       SELECT 'institution_level', count(DISTINCT institution_level), max(institution_level)
-      FROM analytics.icta_training_data
+      FROM ${PROGRAMME_TABLE}
       UNION ALL
       SELECT 'trainer_level', count(DISTINCT trainer_level), max(trainer_level)
-      FROM analytics.icta_training_data
+      FROM ${PROGRAMME_TABLE}
       UNION ALL
-      SELECT 'training_location', count(DISTINCT training_location), max(training_location)
-      FROM analytics.icta_training_data`),
+      SELECT 'where_course_taken', count(DISTINCT where_course_taken), max(where_course_taken)
+      FROM ${PROGRAMME_TABLE}
+      UNION ALL
+      SELECT 'cdc_name', count(DISTINCT cdc_name), max(cdc_name)
+      FROM ${PROGRAMME_TABLE}`),
     db.query(`
-      SELECT dataset_key, display_name, expected_table, active_source,
-             loaded_at::text, row_count, notes,
-             coverage_count, coverage_denominator, coverage_note
-      FROM app.dataset_registry
-      ORDER BY CASE dataset_key
-        WHEN 'training_records' THEN 0
-        WHEN 'registration' THEN 1
-        WHEN 'baseline' THEN 2
-        WHEN 'completion' THEN 3
-        WHEN 'contacts' THEN 4
-        WHEN 'busia_cohort' THEN 5
-        WHEN 'county_cohort' THEN 6
-        WHEN 'disability_supplement' THEN 7
-        ELSE 8 END`)
+      WITH totals AS (
+        SELECT count(*)::int AS total_rows FROM ${PROGRAMME_TABLE}
+      ),
+      stream_rows AS (
+        SELECT source, count(*)::int AS row_count
+        FROM ${PROGRAMME_TABLE}
+        GROUP BY source
+      ),
+      coverage AS (
+        SELECT 'gender' AS field, count(*) FILTER (WHERE ${nonBlankSql("t.gender")})::int AS n FROM ${PROGRAMME_TABLE} t
+        UNION ALL SELECT 'age_group', count(*) FILTER (WHERE ${nonBlankSql("t.age_group")})::int FROM ${PROGRAMME_TABLE} t
+        UNION ALL SELECT 'county', count(*) FILTER (WHERE ${nonBlankSql("t.county")})::int FROM ${PROGRAMME_TABLE} t
+        UNION ALL SELECT 'disability_status', count(*) FILTER (WHERE ${nonBlankSql("t.disability_status")})::int FROM ${PROGRAMME_TABLE} t
+        UNION ALL SELECT 'education_level', count(*) FILTER (WHERE ${nonBlankSql("t.education_level")})::int FROM ${PROGRAMME_TABLE} t
+        UNION ALL SELECT 'course_category', count(*) FILTER (WHERE ${nonBlankSql("t.course_category")})::int FROM ${PROGRAMME_TABLE} t
+        UNION ALL SELECT 'completion_fields', count(*) FILTER (WHERE t.pct_complete IS NOT NULL OR t.completion_date IS NOT NULL)::int FROM ${PROGRAMME_TABLE} t
+      )
+      SELECT lower(source) AS dataset_key,
+             source || ' stream' AS display_name,
+             'analytics."20_million_by_2032"' AS expected_table,
+             'actual' AS active_source,
+             NULL::text AS loaded_at,
+             row_count,
+             'Source stream inside the combined 20 million by 2032 table.' AS notes,
+             row_count AS coverage_count,
+             (SELECT total_rows FROM totals) AS coverage_denominator,
+             'Rows from this stream within the combined table.' AS coverage_note
+      FROM stream_rows
+      UNION ALL
+      SELECT 'field_' || field AS dataset_key,
+             field || ' coverage' AS display_name,
+             'analytics."20_million_by_2032".' || field AS expected_table,
+             CASE WHEN n = (SELECT total_rows FROM totals) THEN 'actual' ELSE 'partial' END AS active_source,
+             NULL::text AS loaded_at,
+             n AS row_count,
+             'Field-level completeness in the combined table.' AS notes,
+             n AS coverage_count,
+             (SELECT total_rows FROM totals) AS coverage_denominator,
+             'Non-empty values / total rows.' AS coverage_note
+      FROM coverage
+      ORDER BY dataset_key`)
   ]);
 
   const m = metrics.rows[0];
@@ -58,17 +97,19 @@ export async function GET() {
     widgets: {
       metrics: {
         data: { ...m, duplicate_rate: Number((dupRate * 100).toFixed(2)), quality_score: score },
-        provenance: provenanceFor(registry, ["training_records"])
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY])
       },
       placeholders: {
         data: placeholders.rows,
-        provenance: provenanceFor(registry, ["training_records"], {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           note: "Fields with a single repeated value are flagged as placeholders pending source confirmation."
         })
       },
       registry: {
         data: registryRows.rows,
-        provenance: provenanceFor(registry, ["training_records"])
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
+          note: "Runtime registry derived directly from analytics.20_million_by_2032."
+        })
       }
     }
   });

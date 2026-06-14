@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "./source-sql";
 
 export type ProvenanceStatus = "actual" | "partial" | "blended" | "modeled" | "unavailable";
 
@@ -32,13 +33,53 @@ export interface RegistryRow {
   coverage_note: string | null;
 }
 
-export async function getRegistry(): Promise<Map<string, RegistryRow>> {
-  const { rows } = await db.query<RegistryRow>(
-    `SELECT dataset_key, active_source, loaded_at, display_name, notes,
-            coverage_count, coverage_denominator, coverage_note
-     FROM app.dataset_registry`
-  );
+function fallbackRegistry(): Map<string, RegistryRow> {
+  const row = (dataset_key: string, display_name: string, active_source: RegistryRow["active_source"]): RegistryRow => ({
+    dataset_key,
+    active_source,
+    loaded_at: null,
+    display_name,
+    notes: "Runtime provenance fallback; app.dataset_registry is not present in the live database.",
+    coverage_count: null,
+    coverage_denominator: null,
+    coverage_note: null
+  });
+
+  const rows: RegistryRow[] = [
+    row(PROGRAMME_DATASET_KEY, "20 million by 2032 combined source", "actual"),
+    row("training_records", "Training stream within combined source", "actual"),
+    row("completion", "Completion fields within combined source", "partial"),
+    row("demographics", "Demographic fields within combined source", "partial")
+  ];
+
   return new Map(rows.map((r) => [r.dataset_key, r]));
+}
+
+export async function getRegistry(): Promise<Map<string, RegistryRow>> {
+  try {
+    const { rows } = await db.query<RegistryRow>(
+      `SELECT dataset_key, active_source, loaded_at, display_name, notes,
+              coverage_count, coverage_denominator, coverage_note
+       FROM app.dataset_registry`
+    );
+    const registry = new Map(rows.map((r) => [r.dataset_key, r]));
+    if (!registry.has(PROGRAMME_DATASET_KEY)) {
+      registry.set(PROGRAMME_DATASET_KEY, {
+        dataset_key: PROGRAMME_DATASET_KEY,
+        active_source: "actual",
+        loaded_at: null,
+        display_name: "20 million by 2032 combined source",
+        notes: `Combined live source table: ${PROGRAMME_TABLE}.`,
+        coverage_count: null,
+        coverage_denominator: null,
+        coverage_note: null
+      });
+    }
+    return registry;
+  } catch (error) {
+    if ((error as { code?: string }).code === "42P01") return fallbackRegistry();
+    throw error;
+  }
 }
 
 /**

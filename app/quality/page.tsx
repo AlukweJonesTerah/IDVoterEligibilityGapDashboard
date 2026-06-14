@@ -25,7 +25,7 @@ export default function QualityPage() {
   return (
     <PageShell
       title="Data Quality & Program Assurance"
-      subtitle="Shows which datasets are loaded, which are modeled and which are still missing, with duplicate and completeness checks on the loaded data."
+      subtitle="Shows combined-source stream coverage, field completeness, duplicate pressure and missing values in the live 20 million by 2032 table."
     >
       {!w ? (
         <LoadingBlock error={error} />
@@ -33,8 +33,8 @@ export default function QualityPage() {
         <>
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <Kpi label="Data quality score" help="Composite score from completeness, duplicate rate and field validity of the loaded data. Higher is better." value={`${w.metrics.data.quality_score} / 100`} provenance={w.metrics.provenance} />
-            <Kpi label="Total records" help="All rows ingested into the training table." value={fmt(w.metrics.data.total_rows)} provenance={w.metrics.provenance} />
-            <Kpi label="Unique learners" help="Distinct learner IDs after deduplication." value={fmt(w.metrics.data.unique_learners)} provenance={w.metrics.provenance} />
+            <Kpi label="Total records" help="All rows in analytics.20_million_by_2032." value={fmt(w.metrics.data.total_rows)} provenance={w.metrics.provenance} />
+            <Kpi label="Unique people" help="Distinct fallback person keys after deduplication." value={fmt(w.metrics.data.unique_learners)} provenance={w.metrics.provenance} />
             <Kpi
               label="Duplicate learner IDs"
               help="Learner IDs that appear on more than one record. These are deduplicated before any learner count is reported."
@@ -51,7 +51,7 @@ export default function QualityPage() {
             />
           </section>
 
-          <Widget title="Dataset registry: the source of truth for every widget" help="Which source datasets are loaded (actual), modeled as placeholders (sample), or still missing. Every provenance dot on the dashboard traces back to this table." provenance={w.registry.provenance}>
+          <Widget title="Combined source coverage" help="Rows by source stream and field-level completeness inside analytics.20_million_by_2032." provenance={w.registry.provenance}>
             <table className="w-full text-left text-[12px]">
               <thead className="text-mute">
                 <tr className="border-b border-hair">
@@ -102,7 +102,7 @@ export default function QualityPage() {
           </Widget>
 
           <Widget
-            title="Placeholder-like fields in the loaded table"
+            title="Low-variation fields in the loaded table"
             help="Columns whose values never vary, which suggests placeholder data rather than real source values."
             provenance={w.placeholders.provenance}
           >
@@ -125,8 +125,7 @@ export default function QualityPage() {
               </tbody>
             </table>
             <p className="mt-2 text-[11px] text-mute">
-              Fields with one repeated value across all records are treated as placeholders and excluded from
-              analysis until the data team confirms their source.
+              Fields with very low variation should be treated carefully until the data team confirms their source.
             </p>
           </Widget>
         </>

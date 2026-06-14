@@ -2,82 +2,125 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { fmt } from "@/lib/format";
-import { demographicPoolFilterSql, partialPoolFilterNote, readFilters } from "@/lib/filters-server";
+import { filterSql, filterValues, readFilters } from "@/lib/filters-server";
+import {
+  ageBandSql,
+  hasDeviceSql,
+  nonBlankSql,
+  personKeySql,
+  PROGRAMME_DATASET_KEY,
+  PROGRAMME_TABLE
+} from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
-const POOL_KEYS = ["county_cohort", "disability_supplement", "contacts", "busia_cohort"];
 const POOL_NOTE =
-  "From the pool of live records with demographic data. County filters apply where the source records carry county; this is not the full 101k learner base.";
+  "From analytics.20_million_by_2032. Coverage varies by field because not every source stream carries every demographic value.";
 
 export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
-  const demographicParams = [filters.county];
-  const unsupportedPartialFilters = partialPoolFilterNote(filters);
+  const params = filterValues(filters);
 
   const [kpis, gender, age, disability, education, device] = await Promise.all([
     db.query(`
       SELECT count(*)::int AS persons,
              count(gender)::int AS gender_known,
-             count(*) FILTER (WHERE gender = 'FEMALE')::int AS female,
+             count(*) FILTER (WHERE lower(trim(gender)) = 'female')::int AS female,
              count(age_band)::int AS age_known,
              count(*) FILTER (WHERE age_band IN ('18-24','25-34'))::int AS youth,
-             count(has_disability)::int AS disability_known,
-             count(*) FILTER (WHERE has_disability)::int AS pwd,
-             count(has_device)::int AS device_known,
-             count(*) FILTER (WHERE has_device)::int AS with_device,
+             count(disability_status)::int AS disability_known,
+             count(*) FILTER (WHERE lower(trim(disability_status)) = 'yes')::int AS pwd,
+             count(*) FILTER (WHERE has_device_known)::int AS device_known,
+             count(*) FILTER (WHERE has_device_known AND has_device)::int AS with_device,
              count(education_level)::int AS education_known
-      FROM staging.demographic_persons d
-      WHERE ${demographicPoolFilterSql("d")}`,
-      demographicParams
+      FROM (
+        SELECT DISTINCT ON (${personKeySql("t")})
+               ${personKeySql("t")} AS person_key,
+               nullif(trim(t.gender), '') AS gender,
+               ${ageBandSql("t.age_group")} AS age_band,
+               nullif(trim(t.disability_status), '') AS disability_status,
+               (${hasDeviceSql("t")}) AS has_device,
+               (${nonBlankSql("t.has_device")} OR ${nonBlankSql("t.device_used")} OR ${nonBlankSql("t.device_type")}) AS has_device_known,
+               nullif(trim(t.education_level), '') AS education_level
+        FROM ${PROGRAMME_TABLE} t
+        WHERE ${filterSql("t")}
+        ORDER BY ${personKeySql("t")},
+          CASE WHEN ${nonBlankSql("t.gender")} THEN 0 ELSE 1 END,
+          CASE WHEN ${nonBlankSql("t.age_group")} THEN 0 ELSE 1 END,
+          CASE WHEN ${nonBlankSql("t.education_level")} THEN 0 ELSE 1 END
+      ) d`,
+      params
     ),
     db.query(`
       SELECT gender AS label, count(*)::int AS learners
-      FROM staging.demographic_persons d
-      WHERE d.gender IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key, nullif(trim(t.gender), '') AS gender
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2
+      ) d
+      WHERE d.gender IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      demographicParams
+      params
     ),
     db.query(`
       SELECT age_band AS label, count(*)::int AS learners
-      FROM staging.demographic_persons d
-      WHERE d.age_band IS NOT NULL AND ${demographicPoolFilterSql("d")}
-      GROUP BY 1 ORDER BY 1`,
-      demographicParams
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key, ${ageBandSql("t.age_group")} AS age_band
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2
+      ) d
+      WHERE d.age_band IS NOT NULL
+      GROUP BY 1
+      ORDER BY CASE age_band WHEN '18-24' THEN 1 WHEN '25-34' THEN 2 WHEN '35+' THEN 3 WHEN '45-54' THEN 4 WHEN '55+' THEN 5 ELSE 99 END`,
+      params
     ),
     db.query(`
-      SELECT CASE WHEN has_disability THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
+      SELECT CASE WHEN lower(trim(disability_status)) = 'yes' THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
              count(*)::int AS learners
-      FROM staging.demographic_persons d
-      WHERE d.has_disability IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key, nullif(trim(t.disability_status), '') AS disability_status
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2
+      ) d
+      WHERE d.disability_status IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      demographicParams
+      params
     ),
     db.query(`
       SELECT education_level AS label, count(*)::int AS learners
-      FROM staging.demographic_persons d
-      WHERE d.education_level IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key, nullif(trim(t.education_level), '') AS education_level
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2
+      ) d
+      WHERE d.education_level IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      demographicParams
+      params
     ),
     db.query(`
       SELECT CASE WHEN has_device THEN 'HAS DEVICE' ELSE 'NO DEVICE' END AS label,
              count(*)::int AS learners
-      FROM staging.demographic_persons d
-      WHERE d.has_device IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key,
+               (${hasDeviceSql("t")}) AS has_device,
+               (${nonBlankSql("t.has_device")} OR ${nonBlankSql("t.device_used")} OR ${nonBlankSql("t.device_type")}) AS has_device_known
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2, 3
+      ) d
+      WHERE d.has_device_known
       GROUP BY 1 ORDER BY 2 DESC`,
-      demographicParams
+      params
     )
   ]);
 
   const k = kpis.rows[0];
   const pct = (a: number, b: number) => (b > 0 ? Number(((100 * a) / b).toFixed(1)) : null);
   const partial = (coverage: string) =>
-    provenanceFor(registry, POOL_KEYS, {
+    provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
       status: "partial",
       coverage,
-      note: unsupportedPartialFilters ? `${POOL_NOTE} ${unsupportedPartialFilters}` : POOL_NOTE
+      note: POOL_NOTE
     });
 
   return NextResponse.json({
@@ -106,10 +149,10 @@ export async function GET(req: NextRequest) {
       },
       age: {
         data: age.rows,
-        provenance: provenanceFor(registry, POOL_KEYS, {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "partial",
           coverage: `Age group known for ${fmt(k.age_known)} of ${fmt(k.persons)} pooled records.`,
-          note: "Source tables use inconsistent age buckets; bands harmonized into standard ranges (18-24, 25-34, 35-44, 45-54, 55+) by lower bound."
+          note: "Source age labels are harmonized into broad bands from analytics.20_million_by_2032."
         })
       },
       disability: {
@@ -121,20 +164,20 @@ export async function GET(req: NextRequest) {
       education: {
         data: education.rows,
         provenance: partial(
-          `Education level known for ${fmt(k.education_known)} of ${fmt(k.persons)} pooled records (Busia and county cohort sources).`
+          `Education level known for ${fmt(k.education_known)} of ${fmt(k.persons)} pooled records.`
         )
       },
       device: {
         data: device.rows,
         provenance: partial(
-          `Device data exists for ${fmt(k.device_known)} records from the Busia pilot only; not a national measure.`
+          `Device data exists for ${fmt(k.device_known)} of ${fmt(k.persons)} pooled records.`
         )
       },
       employment: {
         data: [],
-        provenance: provenanceFor(registry, ["baseline"], {
-          status: "unavailable",
-          note: "Employment status comes from the learner baseline dataset, which has no rows yet."
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
+          status: "partial",
+          note: "Employment status exists in the combined table but is not yet visualized on this page."
         })
       }
     }

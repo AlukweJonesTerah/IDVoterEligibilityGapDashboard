@@ -29,24 +29,24 @@ export default function ExecutiveOverview() {
           {/* Row 1: core programme progress */}
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <Kpi
-              label="Unique learners"
-              help="Distinct individuals trained, counted once no matter how many courses they take. This is the official figure tracked against the 20 million target."
+              label="Unique people"
+              help="Distinct people in the combined source, deduplicated using available national ID, phone, email, survey UUID and record ID values."
               value={fmt(w.headline.data.uniqueLearners)}
-              sub="distinct individuals, counted once"
+              sub="deduplicated across source streams"
               provenance={w.headline.provenance}
             />
             <Kpi
-              label="Total trainings"
-              help="Every course participation record. One learner taking five courses counts five times here."
+              label="Source records"
+              help="All rows in the combined 20 million by 2032 source table in the current filter scope."
               value={fmt(w.headline.data.enrolments)}
-              sub="all course participation records"
+              sub="all combined-source rows"
               provenance={w.headline.provenance}
             />
             <Kpi
               label="Progress to 20M"
               help="Unique learners as a share of the national target of 20 million Kenyans skilled by 2032."
               value={fmtPct(w.headline.data.progressPct)}
-              sub={`${fmtCompact(w.headline.data.uniqueLearners)} of ${fmtCompact(w.headline.data.target)} learners`}
+              sub={`${fmtCompact(w.headline.data.uniqueLearners)} of ${fmtCompact(w.headline.data.target)} people`}
               provenance={w.headline.provenance}
             />
             <Kpi

@@ -1,87 +1,114 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor, TARGET_TOTAL } from "@/lib/provenance";
-import {
-  readFilters,
-  filterValues,
-  filterSql,
-  demographicPoolFilterSql,
-  partialPoolFilterNote
-} from "@/lib/filters-server";
+import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
+import {
+  ageBandSql,
+  hasDeviceSql,
+  kenyaCountyValuesSql,
+  nonBlankSql,
+  personKeySql,
+  PROGRAMME_DATASET_KEY,
+  PROGRAMME_TABLE
+} from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
-const POOL_NOTE =
-  "From the pool of records with demographic data in the live sources. County filters apply where the source records carry county; this is not the full 101k learner base.";
+const TABLE_NOTE =
+  "From analytics.20_million_by_2032, the combined source covering Training, Citizens and KICTANET streams. Course and date filters only apply where those fields exist.";
 
 export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
-  const demographicParams = [filters.county];
-  const unsupportedPartialFilters = partialPoolFilterNote(filters);
 
   const [totals, categories, countyMap, pool, age, disability, completion] = await Promise.all([
     db.query(
       `SELECT count(*)::int AS enrolments,
-              count(DISTINCT t.unique_id)::int AS unique_learners,
-              count(DISTINCT t.county)::int AS counties,
-              count(DISTINCT t.course_taken)::int AS courses,
+              count(DISTINCT ${personKeySql("t")})::int AS unique_learners,
+              count(DISTINCT kc.county_norm)::int AS counties,
+              count(DISTINCT t.course_taken) FILTER (WHERE ${nonBlankSql("t.course_taken")})::int AS courses,
               min(t.date_trained)::text AS first_date,
               max(t.date_trained)::text AS last_date
-       FROM analytics.icta_training_data t WHERE ${filterSql("t")}`,
+       FROM ${PROGRAMME_TABLE} t
+       LEFT JOIN ${kenyaCountyValuesSql("kc")} ON kc.county_norm = regexp_replace(lower(coalesce(t.county, '')), '[^a-z0-9]+', '', 'g')
+       WHERE ${filterSql("t")}`,
       params
     ),
     db.query(
       `SELECT t.course_category, count(*)::int AS enrolments
-       FROM analytics.icta_training_data t WHERE ${filterSql("t")}
+       FROM ${PROGRAMME_TABLE} t
+       WHERE t.source = 'Training' AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 2 DESC`,
       params
     ),
     db.query(
-      `SELECT coalesce(c.county_name, initcap(t.county)) AS county_label,
-              count(DISTINCT t.unique_id)::int AS learners
-       FROM analytics.icta_training_data t
-       LEFT JOIN ref.counties c ON ref.norm_county(c.county_name) = ref.norm_county(t.county)
+      `SELECT kc.county_name AS county_label,
+              count(DISTINCT ${personKeySql("t")})::int AS learners
+       FROM ${PROGRAMME_TABLE} t
+       JOIN ${kenyaCountyValuesSql("kc")} ON kc.county_norm = regexp_replace(lower(coalesce(t.county, '')), '[^a-z0-9]+', '', 'g')
        WHERE ${filterSql("t")}
-       GROUP BY 1 ORDER BY 2 DESC`,
+       GROUP BY kc.county_name ORDER BY 2 DESC`,
       params
     ),
     db.query(`
       SELECT count(*)::int AS persons,
              count(gender)::int AS gender_known,
-             count(*) FILTER (WHERE gender = 'FEMALE')::int AS female,
+             count(*) FILTER (WHERE lower(trim(gender)) = 'female')::int AS female,
              count(age_band)::int AS age_known,
              count(*) FILTER (WHERE age_band IN ('18-24','25-34'))::int AS youth,
-             count(has_disability)::int AS disability_known,
-             count(*) FILTER (WHERE has_disability)::int AS pwd,
-             count(has_device)::int AS device_known,
-             count(*) FILTER (WHERE has_device)::int AS with_device
-      FROM staging.demographic_persons d
-      WHERE ${demographicPoolFilterSql("d")}`,
-      demographicParams
+             count(disability_status)::int AS disability_known,
+             count(*) FILTER (WHERE lower(trim(disability_status)) = 'yes')::int AS pwd,
+             count(*) FILTER (WHERE has_device_known)::int AS device_known,
+             count(*) FILTER (WHERE has_device_known AND has_device)::int AS with_device
+      FROM (
+        SELECT DISTINCT ON (${personKeySql("t")})
+               ${personKeySql("t")} AS person_key,
+               nullif(trim(t.gender), '') AS gender,
+               ${ageBandSql("t.age_group")} AS age_band,
+               nullif(trim(t.disability_status), '') AS disability_status,
+               (${hasDeviceSql("t")}) AS has_device,
+               (${nonBlankSql("t.has_device")} OR ${nonBlankSql("t.device_used")} OR ${nonBlankSql("t.device_type")}) AS has_device_known
+        FROM ${PROGRAMME_TABLE} t
+        WHERE ${filterSql("t")}
+        ORDER BY ${personKeySql("t")},
+          CASE WHEN ${nonBlankSql("t.gender")} THEN 0 ELSE 1 END,
+          CASE WHEN ${nonBlankSql("t.age_group")} THEN 0 ELSE 1 END
+      ) d`,
+      params
     ),
     db.query(`
       SELECT age_band AS label, count(*)::int AS learners
-      FROM staging.demographic_persons d
-      WHERE d.age_band IS NOT NULL AND ${demographicPoolFilterSql("d")}
-      GROUP BY 1 ORDER BY 1`,
-      demographicParams
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key, ${ageBandSql("t.age_group")} AS age_band
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2
+      ) d
+      WHERE d.age_band IS NOT NULL
+      GROUP BY 1
+      ORDER BY CASE age_band WHEN '18-24' THEN 1 WHEN '25-34' THEN 2 WHEN '35+' THEN 3 WHEN '45-54' THEN 4 WHEN '55+' THEN 5 ELSE 99 END`,
+      params
     ),
     db.query(`
-      SELECT CASE WHEN has_disability THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
+      SELECT CASE WHEN lower(trim(disability_status)) = 'yes' THEN 'REPORTED DISABILITY' ELSE 'NO DISABILITY' END AS label,
              count(*)::int AS learners
-      FROM staging.demographic_persons d
-      WHERE d.has_disability IS NOT NULL AND ${demographicPoolFilterSql("d")}
+      FROM (
+        SELECT ${personKeySql("t")} AS person_key, nullif(trim(t.disability_status), '') AS disability_status
+        FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")}
+        GROUP BY 1, 2
+      ) d
+      WHERE d.disability_status IS NOT NULL
       GROUP BY 1 ORDER BY 2 DESC`,
-      demographicParams
+      params
     ),
     db.query(`
       SELECT count(*)::int AS records,
              round(avg(quiz_average), 1)::float AS avg_quiz,
-             count(*) FILTER (WHERE percent_complete >= 100)::int AS completed
-      FROM staging.completion_records`)
+             count(*) FILTER (WHERE pct_complete >= 100 OR completion_date IS NOT NULL)::int AS completed
+      FROM ${PROGRAMME_TABLE} t WHERE ${filterSql("t")} AND (t.pct_complete IS NOT NULL OR t.completion_date IS NOT NULL)`,
+      params
+    )
   ]);
 
   const t = totals.rows[0];
@@ -89,10 +116,10 @@ export async function GET(req: NextRequest) {
   const pct = (a: number, b: number) => (b > 0 ? Number(((100 * a) / b).toFixed(1)) : null);
 
   const partialPool = (coverage: string) =>
-    provenanceFor(registry, ["county_cohort", "disability_supplement", "contacts", "busia_cohort"], {
+    provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
       status: "partial",
       coverage,
-      note: unsupportedPartialFilters ? `${POOL_NOTE} ${unsupportedPartialFilters}` : POOL_NOTE
+      note: TABLE_NOTE
     });
 
   return NextResponse.json({
@@ -108,15 +135,17 @@ export async function GET(req: NextRequest) {
           target: TARGET_TOTAL,
           progressPct: Number((((t.unique_learners ?? 0) / TARGET_TOTAL) * 100).toFixed(2))
         },
-        provenance: provenanceFor(registry, ["training_records"])
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], { note: TABLE_NOTE })
       },
       categories: {
         data: categories.rows,
-        provenance: provenanceFor(registry, ["training_records"])
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
+          note: "Course categories come from the Training stream inside the combined source table."
+        })
       },
       countyMap: {
         data: countyMap.rows,
-        provenance: provenanceFor(registry, ["training_records"])
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], { note: TABLE_NOTE })
       },
       inclusion: {
         data: {
@@ -146,10 +175,10 @@ export async function GET(req: NextRequest) {
       },
       age: {
         data: age.rows,
-        provenance: provenanceFor(registry, ["county_cohort", "disability_supplement", "contacts", "busia_cohort"], {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "partial",
           coverage: `Age group known for ${fmt(p.age_known)} of ${fmt(p.persons)} pooled records.`,
-          note: "Source tables use inconsistent age buckets; bands harmonized into standard ranges (18-24, 25-34, 35-44, 45-54, 55+) by lower bound."
+          note: "Source age labels are harmonized into broad bands from analytics.20_million_by_2032."
         })
       },
       disability: {
@@ -165,9 +194,9 @@ export async function GET(req: NextRequest) {
           avg_quiz: completion.rows[0].avg_quiz,
           completed: completion.rows[0].completed
         },
-        provenance: provenanceFor(registry, ["completion"], {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "unavailable",
-          note: `Only ${completion.rows[0].records} actual completion records are loaded; not representative of national completion. No modeled estimate is shown for this audience.`
+          note: `Only ${completion.rows[0].records} records have completion fields in analytics.20_million_by_2032; not representative of the full programme. No modeled estimate is shown.`
         })
       }
     }

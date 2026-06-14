@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
-import {
-  readFilters,
-  filterValues,
-  filterSql,
-  demographicPoolFilterSql,
-  partialPoolFilterNote
-} from "@/lib/filters-server";
+import { readFilters, filterValues, filterSql } from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
+import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
@@ -16,39 +11,45 @@ export async function GET(req: NextRequest) {
   const registry = await getRegistry();
   const filters = readFilters(req);
   const params = filterValues(filters);
-  const demographicParams = [filters.county];
-  const unsupportedPartialFilters = partialPoolFilterNote(filters);
 
   const [stages, completion, completionTrend, cohorts, dailyActivity] = await Promise.all([
     db.query(
-      `SELECT count(DISTINCT t.unique_id)::int AS registered,
+      `SELECT count(DISTINCT ${personKeySql("t")})::int AS registered,
               count(*)::int AS enrolled
-       FROM analytics.icta_training_data t WHERE ${filterSql("t")}`,
+       FROM ${PROGRAMME_TABLE} t
+       WHERE t.source = 'Training' AND ${filterSql("t")}`,
       params
     ),
     db.query(`
       SELECT count(*)::int AS records,
              round(avg(quiz_average), 1)::float AS avg_quiz,
-             count(*) FILTER (WHERE percent_complete >= 100)::int AS completed,
+             count(*) FILTER (WHERE pct_complete >= 100 OR completion_date IS NOT NULL)::int AS completed,
              min(completion_date)::text AS first_date,
              max(completion_date)::text AS last_date
-      FROM staging.completion_records`),
+      FROM ${PROGRAMME_TABLE} t
+      WHERE ${filterSql("t")} AND (t.pct_complete IS NOT NULL OR t.completion_date IS NOT NULL)`,
+      params
+    ),
     db.query(`
       SELECT completion_date::text AS day, count(*)::int AS completions
-      FROM staging.completion_records WHERE completion_date IS NOT NULL
-      GROUP BY 1 ORDER BY 1`),
+      FROM ${PROGRAMME_TABLE} t
+      WHERE ${filterSql("t")} AND completion_date IS NOT NULL
+      GROUP BY 1 ORDER BY 1`,
+      params
+    ),
     db.query(`
       SELECT cohort, count(*)::int AS learners,
-             count(gender)::int AS gender_known
-      FROM staging.demographic_persons d
-      WHERE d.cohort IS NOT NULL AND ${demographicPoolFilterSql("d")}
+             count(*) FILTER (WHERE ${nonBlankSql("t.gender")})::int AS gender_known
+      FROM ${PROGRAMME_TABLE} t
+      WHERE ${filterSql("t")} AND ${nonBlankSql("t.cohort")}
       GROUP BY 1 ORDER BY learners DESC LIMIT 15`,
-      demographicParams
+      params
     ),
     db.query(
       `SELECT t.date_trained::text AS day, count(*)::int AS enrolments,
-              count(DISTINCT t.unique_id)::int AS learners
-       FROM analytics.icta_training_data t WHERE ${filterSql("t")}
+              count(DISTINCT ${personKeySql("t")})::int AS learners
+       FROM ${PROGRAMME_TABLE} t
+       WHERE t.source = 'Training' AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 1`,
       params
     )
@@ -64,38 +65,40 @@ export async function GET(req: NextRequest) {
           enrolled: stages.rows[0].enrolled,
           completion_records: comp.records
         },
-        provenance: provenanceFor(registry, ["training_records", "completion"], {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "partial",
-          coverage: `Registered and enrolled are actual; only ${fmt(comp.records)} actual completion records exist.`,
+          coverage: `Registered and enrolled are scoped to Training records; ${fmt(comp.records)} records have completion fields.`,
           note: "Started, completed and certified stages cannot be computed nationally from current source data."
         })
       },
       completionSummary: {
         data: comp,
-        provenance: provenanceFor(registry, ["completion"], {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "partial",
-          coverage: `${fmt(comp.records)} actual completion records loaded; not representative of national completion.`,
-          note: "Pilot-slice data from the completion source."
+          coverage: `${fmt(comp.records)} records have completion fields in analytics.20_million_by_2032.`,
+          note: "Completion fields are populated only on a small stream and are not representative of national completion."
         })
       },
       completionTrend: {
         data: completionTrend.rows,
-        provenance: provenanceFor(registry, ["completion"], {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "partial",
-          coverage: `${fmt(comp.records)} actual completion records.`,
+          coverage: `${fmt(comp.records)} actual records with completion fields.`,
           note: "Pilot-slice completions only; not a national trend."
         })
       },
       cohorts: {
         data: cohorts.rows,
-        provenance: provenanceFor(registry, ["county_cohort", "busia_cohort"], {
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "partial",
-          note: `Real cohort assignments from the cohort sources; covers a partial record pool, not all learners. County filters apply where source records carry county. Completion per cohort is not yet in the source data.${unsupportedPartialFilters ? ` ${unsupportedPartialFilters}` : ""}`
+          note: "Cohort assignments come from the combined source where populated. Completion per cohort is not yet reliable nationally."
         })
       },
       dailyActivity: {
         data: dailyActivity.rows,
-        provenance: provenanceFor(registry, ["training_records"])
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
+          note: "Daily activity is scoped to source = Training because date_trained is populated on training records."
+        })
       }
     }
   });

@@ -35,7 +35,7 @@ export function PageShell({
                 National Digital & AI Skills Dashboard
               </div>
               <div className="mt-0.5 whitespace-nowrap text-[8.5px] font-semibold uppercase tracking-normal text-mute sm:mt-1 sm:text-[10.5px] sm:tracking-[0.06em]">
-                ICT Authority · Microsoft · Pathways Technologies
+                ICT Authority · Microsoft
               </div>
             </div>
           </div>
@@ -74,8 +74,13 @@ export function PageShell({
 
           {children}
 
-          <footer className="border-t border-hair pt-3 pb-2">
-            <ProvenanceLegend />
+          <footer className="border-t border-hair pb-2 pt-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <ProvenanceLegend />
+              <div className="text-xs font-medium text-mute sm:text-right">
+                Portal built by <span className="font-semibold text-subink">Pathways Technologies</span>
+              </div>
+            </div>
           </footer>
         </div>
       </main>

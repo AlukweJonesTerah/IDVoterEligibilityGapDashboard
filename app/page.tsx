@@ -50,27 +50,6 @@ function RankedList({
   );
 }
 
-function RankTable({ rows, startRank = 1 }: { rows: RankedRow[]; startRank?: number }) {
-  return (
-    <ol className="flex flex-col">
-      {rows.map((row, i) => (
-        <li
-          key={row.label}
-          className="flex items-center gap-3 border-b border-hair2 py-[7px] last:border-0"
-        >
-          <span className="tnum w-5 shrink-0 text-center text-[11px] font-semibold text-mute">
-            {startRank + i}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-[12px] text-ink" title={row.label}>
-            {row.label}
-          </span>
-          <span className="tnum shrink-0 text-[12px] font-semibold text-ink">{fmt(row.value)}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 function StackedBar({ segments }: { segments: { label: string; value: number; color: string }[] }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0) || 1;
   return (
@@ -212,12 +191,14 @@ export default function ExecutiveOverview() {
               help="Counties ranked by unique learners in the current filter scope. Most reached on the left, least reached on the right."
               provenance={w.countyMap.provenance}
             >
-              <div className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+              <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                 <div>
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-icta-redDeep">
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-icta-redDeep">
                     Most reached
                   </div>
-                  <RankTable
+                  <RankedList
+                    maxRows={5}
+                    color="#ED1C24"
                     rows={w.countyMap.data.slice(0, 5).map((d: { county_label: string; learners: number }) => ({
                       label: d.county_label,
                       value: d.learners
@@ -225,11 +206,12 @@ export default function ExecutiveOverview() {
                   />
                 </div>
                 <div>
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mute">
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-mute">
                     Least reached
                   </div>
-                  <RankTable
-                    startRank={Math.max(1, w.countyMap.data.length - 4)}
+                  <RankedList
+                    maxRows={5}
+                    color="#6D6E6F"
                     rows={w.countyMap.data
                       .slice(-5)
                       .map((d: { county_label: string; learners: number }) => ({

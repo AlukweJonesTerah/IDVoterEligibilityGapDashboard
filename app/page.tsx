@@ -258,7 +258,7 @@ export default function ExecutiveOverview() {
                   </div>
                   <RankedList
                     maxRows={5}
-                    color="#D03B3B"
+                    color="#66C695"
                     rows={w.countyMap.data
                       .slice(-5)
                       .map((d: { county_label: string; learners: number }) => ({

@@ -131,7 +131,7 @@ export default function GeographyPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         {[
           { title: "Top 10 counties", rows: top10, color: "#007A3D", help: "Counties with the most unique learners." },
-          { title: "Bottom 10 counties", rows: bottom10, color: "#D03B3B", help: "Counties with the fewest unique learners, where reach needs the most attention." }
+          { title: "Bottom 10 counties", rows: bottom10, color: "#66C695", help: "Counties with the fewest unique learners, where reach needs the most attention." }
         ].map((cfg) => (
           <Widget key={cfg.title} title={cfg.title} help={cfg.help} provenance={w.counties.provenance}>
             <EChart

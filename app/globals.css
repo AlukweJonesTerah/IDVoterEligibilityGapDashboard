@@ -45,6 +45,12 @@ textarea {
   color: #0e1722;
 }
 
+@media (min-width: 1024px) {
+  .section-title {
+    font-size: 15px;
+  }
+}
+
 .hairline {
   border-color: #e1e5eb;
 }

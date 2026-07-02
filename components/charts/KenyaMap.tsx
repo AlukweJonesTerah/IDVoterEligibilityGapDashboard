@@ -71,7 +71,7 @@ export function KenyaMap({
       itemHeight: 70,
       text: ["High", "Low"],
       textStyle: { color: "#6B7787", fontSize: 11 },
-      inRange: { color: ["#FDEDEB", "#ED1C24", "#8E1014"] }
+      inRange: { color: ["#E6F6EE", "#00A651", "#00522A"] }
     },
     series: [
       {
@@ -86,7 +86,7 @@ export function KenyaMap({
         roam: false,
         selectedMode: false,
         label: { show: false },
-        emphasis: { label: { show: true, fontSize: 10 }, itemStyle: { areaColor: "#101820" } },
+        emphasis: { label: { show: true, fontSize: 10 }, itemStyle: { areaColor: "#00341B" } },
         itemStyle: { borderColor: "#FFFFFF", borderWidth: 0.6 },
         data
       }

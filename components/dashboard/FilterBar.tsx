@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Search } from "lucide-react";
 import { useFilters } from "./FilterContext";
 import { labelCase } from "@/lib/format";
 
@@ -18,6 +19,97 @@ const PRESETS: { value: string; label: string }[] = [
 const selectClass =
   "min-w-[120px] flex-1 rounded border border-hair bg-paperalt px-2 py-1.5 text-xs text-ink focus:border-icta-gray focus:outline-none xl:flex-none";
 
+function CountyCombobox({
+  counties,
+  value,
+  onChange
+}: {
+  counties: string[];
+  value: string | null;
+  onChange: (county: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [open]);
+
+  const filtered = counties.filter((c) => c.toLowerCase().includes(query.trim().toLowerCase()));
+
+  const select = (county: string | null) => {
+    onChange(county);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div ref={rootRef} className="relative min-w-[120px] flex-1 xl:flex-none">
+      <button
+        type="button"
+        aria-label="County"
+        className={`${selectClass} flex w-full items-center justify-between gap-2 text-left`}
+        onClick={() => {
+          setOpen((o) => !o);
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+      >
+        <span className="truncate">{value || "All counties"}</span>
+        <ChevronDown size={13} className="shrink-0 text-mute" />
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 top-full z-30 mt-1 w-56 rounded border border-hair bg-paperalt shadow-lg">
+          <div className="flex items-center gap-1.5 border-b border-hair px-2 py-1.5">
+            <Search size={13} className="shrink-0 text-mute" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setOpen(false);
+              }}
+              placeholder="Search counties..."
+              className="w-full bg-transparent text-xs text-ink outline-none"
+            />
+          </div>
+          <div className="max-h-56 overflow-y-auto py-1">
+            <button
+              type="button"
+              onClick={() => select(null)}
+              className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-icta-greenSoft ${!value ? "font-semibold text-icta-greenDeep" : "text-ink"}`}
+            >
+              All counties
+            </button>
+            {filtered.length ? (
+              filtered.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => select(c)}
+                  className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-icta-greenSoft ${value === c ? "font-semibold text-icta-greenDeep" : "text-ink"}`}
+                >
+                  {c}
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-1.5 text-xs text-mute">No counties match.</p>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function FilterBar() {
   const { filters, setFilters, clear, active } = useFilters();
   const [meta, setMeta] = useState<{ counties: string[]; categories: string[] } | null>(null);
@@ -31,19 +123,11 @@ export function FilterBar() {
 
   return (
     <div className="flex flex-wrap items-center gap-2 py-2.5 xl:py-0">
-      <select
-        aria-label="County"
-        className={selectClass}
-        value={filters.county ?? ""}
-        onChange={(e) => setFilters({ county: e.target.value || null })}
-      >
-        <option value="">All counties</option>
-        {meta?.counties.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
+      <CountyCombobox
+        counties={meta?.counties ?? []}
+        value={filters.county}
+        onChange={(county) => setFilters({ county })}
+      />
 
       <select
         aria-label="Course category"
@@ -95,7 +179,7 @@ export function FilterBar() {
       {active ? (
         <button
           onClick={clear}
-          className="rounded border border-hair bg-paper px-2 py-1.5 text-xs font-medium text-icta-redDeep hover:bg-icta-redSoft"
+          className="rounded border border-hair bg-paper px-2 py-1.5 text-xs font-medium text-icta-greenDeep hover:bg-icta-greenSoft"
         >
           Clear filters
         </button>

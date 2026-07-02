@@ -83,7 +83,7 @@ export default function DemographicsPage() {
                       {
                         type: "bar",
                         barWidth: 28,
-                        itemStyle: { color: "#101820", borderRadius: [2, 2, 0, 0] },
+                        itemStyle: { color: "#007A3D", borderRadius: [2, 2, 0, 0] },
                         data: w.age.data.map((d: { learners: number }) => d.learners)
                       }
                     ]
@@ -128,7 +128,7 @@ export default function DemographicsPage() {
                   option={rankedBarOption(
                     w.education.data.map((d: { label: string }) => labelCase(d.label)),
                     w.education.data.map((d: { learners: number }) => d.learners),
-                    "#ED1C24"
+                    "#007A3D"
                   )}
                 />
               ) : (

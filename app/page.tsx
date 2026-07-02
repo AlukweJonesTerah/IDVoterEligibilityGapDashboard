@@ -1,8 +1,8 @@
 "use client";
 
 import { PageShell } from "@/components/dashboard/PageShell";
-import { Widget, Kpi } from "@/components/dashboard/Widget";
-import { UnavailableNote } from "@/components/dashboard/Provenance";
+import { Widget, Kpi, HelpTip } from "@/components/dashboard/Widget";
+import { UnavailableNote, ProvenanceDot } from "@/components/dashboard/Provenance";
 import { EChart } from "@/components/charts/EChart";
 import { KenyaMap } from "@/components/charts/KenyaMap";
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
@@ -18,7 +18,7 @@ type RankedRow = {
 
 function RankedList({
   rows,
-  color = "#101820",
+  color = "#007A3D",
   maxRows = 10
 }: {
   rows: RankedRow[];
@@ -46,6 +46,15 @@ function RankedList({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ProgressBar({ pct, color = "#00A651" }: { pct: number; color?: string }) {
+  const width = Math.min(100, Math.max(pct > 0 ? 1.5 : 0, pct));
+  return (
+    <div className="h-6 w-full overflow-hidden rounded-sm bg-hair2">
+      <div className="h-full rounded-sm" style={{ width: `${width}%`, backgroundColor: color }} />
     </div>
   );
 }
@@ -90,17 +99,17 @@ export default function ExecutiveOverview() {
           {/* Row 1: core programme progress */}
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <Kpi
-              label="Total Learners"
-              help="All rows in the combined 20 million by 2032 source table in the current filter scope."
+              label="Total learners"
+              help="All training enrolments recorded in the current filter scope. A learner who took more than one course is counted once per course."
               value={fmt(w.headline.data.enrolments)}
-              sub="all combined-source rows"
+              sub="trained across all programmes"
               provenance={w.headline.provenance}
             />
             <Kpi
               label="Progress to 20M"
-              help="Unique learners as a share of the national target of 20 million Kenyans skilled by 2032."
-              value={`${fmtCompact(w.headline.data.uniqueLearners)} of ${fmtCompact(w.headline.data.target)}`}
-              sub={`${fmt(w.headline.data.uniqueLearners)} deduplicated people toward target`}
+              help="Total learners as a share of the national target of 20 million Kenyans skilled by 2032."
+              value={fmtPct(w.headline.data.progressPct)}
+              sub={`of the ${fmtCompact(w.headline.data.target)} target`}
               provenance={w.headline.provenance}
             />
             <Kpi
@@ -122,6 +131,44 @@ export default function ExecutiveOverview() {
               value={w.inclusion.data.disability_known > 0 ? fmt(w.inclusion.data.pwd_learners) : "—"}
               provenance={incProv(`Disability response recorded for ${fmt(w.inclusion.data.disability_known)} of ${fmt(w.inclusion.data.persons)} pooled records.`)}
             />
+            <article className="col-span-2 rounded border border-hair bg-paperalt px-4 py-3 shadow-card lg:col-span-5">
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="eyebrow">Progress to 20M covered</span>
+                    <HelpTip text="Total learners as a share of the national target of 20 million Kenyans skilled by 2032." />
+                    <ProvenanceDot provenance={w.headline.provenance} />
+                  </div>
+                  <div className="mt-2.5">
+                    <ProgressBar pct={w.headline.data.progressPct} />
+                    <div className="mt-1.5 text-[11px] text-subink">
+                      {fmt(w.headline.data.enrolments)} of {fmt(w.headline.data.target)} ·{" "}
+                      <span className="font-semibold text-ink">{fmtPct(w.headline.data.progressPct)}</span> covered
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="eyebrow">Gender split</span>
+                    <HelpTip text="Gender split among pooled records with a known gender." />
+                    <ProvenanceDot provenance={w.genderSplit.provenance} />
+                  </div>
+                  <div className="mt-2.5">
+                    {w.genderSplit.data.some((d: { learners: number }) => d.learners > 0) ? (
+                      <StackedBar
+                        segments={w.genderSplit.data.map((d: { gender: string; learners: number }, index: number) => ({
+                          label: labelCase(d.gender),
+                          value: d.learners,
+                          color: index === 0 ? "#00522A" : "#00A651"
+                        }))}
+                      />
+                    ) : (
+                      <p className="text-[11px] text-mute">No gender records for the current filter.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </article>
           </section>
 
           {/* Main visual area: map + demographic highlights */}
@@ -154,7 +201,7 @@ export default function ExecutiveOverview() {
                       {
                         type: "bar",
                         barWidth: 28,
-                        itemStyle: { color: "#101820", borderRadius: [2, 2, 0, 0] },
+                        itemStyle: { color: "#007A3D", borderRadius: [2, 2, 0, 0] },
                         data: w.age.data.map((d: { learners: number }) => d.learners)
                       }
                     ]
@@ -193,12 +240,12 @@ export default function ExecutiveOverview() {
             >
               <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                 <div>
-                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-icta-redDeep">
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-ink">
                     Most reached
                   </div>
                   <RankedList
                     maxRows={5}
-                    color="#ED1C24"
+                    color="#007A3D"
                     rows={w.countyMap.data.slice(0, 5).map((d: { county_label: string; learners: number }) => ({
                       label: d.county_label,
                       value: d.learners
@@ -206,12 +253,12 @@ export default function ExecutiveOverview() {
                   />
                 </div>
                 <div>
-                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-mute">
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-ink">
                     Least reached
                   </div>
                   <RankedList
                     maxRows={5}
-                    color="#6D6E6F"
+                    color="#D03B3B"
                     rows={w.countyMap.data
                       .slice(-5)
                       .map((d: { county_label: string; learners: number }) => ({
@@ -251,7 +298,7 @@ export default function ExecutiveOverview() {
             >
               <RankedList
                 maxRows={10}
-                color="#ED1C24"
+                color="#007A3D"
                 rows={w.courseLeaderboard.data
                   .slice(0, 10)
                   .map((d: { course: string | null; enrolments: number }) => ({
@@ -262,40 +309,21 @@ export default function ExecutiveOverview() {
             </Widget>
             <Widget
               title="Learner profile"
-              help="Gender split and reported education level, from the partial demographic source pool."
+              help="Reported education level, from the partial demographic source pool."
               provenance={w.education.provenance}
             >
-              <div className="space-y-5">
-                <div>
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-mute">Gender split</div>
-                  {w.genderSplit.data.some((d: { learners: number }) => d.learners > 0) ? (
-                    <StackedBar
-                      segments={w.genderSplit.data.map((d: { gender: string; learners: number }, index: number) => ({
-                        label: labelCase(d.gender),
-                        value: d.learners,
-                        color: index === 0 ? "#101820" : "#ED1C24"
-                      }))}
-                    />
-                  ) : (
-                    <p className="text-[11px] text-mute">No gender records for the current filter.</p>
-                  )}
-                </div>
-                <div>
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-mute">Education level</div>
-                  {w.education.data.length ? (
-                    <RankedList
-                      maxRows={6}
-                      color="#6D6E6F"
-                      rows={w.education.data.map((d: { label: string; learners: number }) => ({
-                        label: labelCase(d.label),
-                        value: d.learners
-                      }))}
-                    />
-                  ) : (
-                    <p className="text-[11px] text-mute">No education-level records for the current filter.</p>
-                  )}
-                </div>
-              </div>
+              {w.education.data.length ? (
+                <RankedList
+                  maxRows={6}
+                  color="#007A3D"
+                  rows={w.education.data.map((d: { label: string; learners: number }) => ({
+                    label: labelCase(d.label),
+                    value: d.learners
+                  }))}
+                />
+              ) : (
+                <p className="text-[11px] text-mute">No education-level records for the current filter.</p>
+              )}
             </Widget>
           </section>
         </>

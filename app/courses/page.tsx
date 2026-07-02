@@ -100,7 +100,7 @@ export default function CoursesAndPipelinePage() {
             option={rankedBarOption(
               courses.slice(0, 15).map((x) => labelCase(x.course)),
               courses.slice(0, 15).map((x) => x.enrolments),
-              "#ED1C24"
+              "#007A3D"
             )}
           />
         </Widget>
@@ -115,13 +115,13 @@ export default function CoursesAndPipelinePage() {
             option={timeLineOption([
               {
                 name: "Enrolments",
-                color: "#ED1C24",
+                color: "#007A3D",
                 area: true,
                 points: p.dailyActivity.data.map((d: { day: string; enrolments: number }) => [d.day, d.enrolments])
               },
               {
                 name: "Unique learners",
-                color: "#101820",
+                color: "#00522A",
                 dashed: true,
                 points: p.dailyActivity.data.map((d: { day: string; learners: number }) => [d.day, d.learners])
               }
@@ -137,7 +137,7 @@ export default function CoursesAndPipelinePage() {
           <div className="flex h-[300px] flex-col justify-center gap-3">
             {[
               { label: "Registered", value: p.funnel.data.registered, width: 98, cls: "bg-icta-black" },
-              { label: "Enrolled", value: p.funnel.data.enrolled, width: 100, cls: "bg-icta-red" }
+              { label: "Enrolled", value: p.funnel.data.enrolled, width: 100, cls: "bg-icta-green" }
             ].map((s) => (
               <div key={s.label} className="flex items-center gap-3">
                 <span className="w-24 text-right text-xs text-subink">{s.label}</span>

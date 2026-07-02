@@ -14,8 +14,11 @@ export const rankedBarMotion = {
   animationDelayUpdate: (idx: number) => idx * 8
 };
 
-// ICTA brand: red and black lead, green is a small accent (logo: #ED1C24 / #101820 / #00A651 / #6D6E6F).
-export const chartPalette = ["#ED1C24", "#101820", "#6D6E6F", "#00A651", "#9A6E20", "#1667A8"];
+// Data marks are shades of ICTA green (validated single-hue ramp: monotone
+// lightness, adjacent steps distinguishable); brand red stays in chrome and
+// alerts only, gray is the de-emphasis neutral. Donut order alternates
+// mid/dark/light so touching slices differ strongly in lightness.
+export const chartPalette = ["#00A651", "#00522A", "#66C695", "#007A3D", "#6D6E6F"];
 
 export const axisStyle = {
   axisLine: { lineStyle: { color: "#E1E5EB" } },

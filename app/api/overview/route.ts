@@ -184,7 +184,7 @@ export async function GET(req: NextRequest) {
           firstDate: t.first_date,
           lastDate: t.last_date,
           target: TARGET_TOTAL,
-          progressPct: Number((((t.unique_learners ?? 0) / TARGET_TOTAL) * 100).toFixed(2))
+          progressPct: Number((((t.enrolments ?? 0) / TARGET_TOTAL) * 100).toFixed(2))
         },
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], { note: TABLE_NOTE })
       },

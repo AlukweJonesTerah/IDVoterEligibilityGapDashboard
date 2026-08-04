@@ -94,8 +94,8 @@ function RankedTable({
   rankStart?: number;
 }) {
   return (
-    <div className="overflow-hidden rounded border border-hair2">
-      <table className="w-full border-collapse text-left text-[11px]">
+    <div className="overflow-hidden rounded border border-hair2 lg:flex-1">
+      <table className="w-full border-collapse text-left text-[11px] lg:h-full">
         <thead className="bg-canvas text-[10px] uppercase tracking-wide text-mute">
           <tr>
             <th className="w-9 px-2.5 py-2 font-semibold">Rank</th>
@@ -399,13 +399,13 @@ export default function ExecutiveOverview() {
           {/* County league table + course-category mix */}
           <section className="grid gap-4 lg:grid-cols-3">
             <Widget
-              className="lg:col-span-2"
+              className="lg:col-span-2 lg:flex lg:flex-col"
               title="County rankings"
               help="Counties ranked by unique learners in the current filter scope. Most reached on the left, least reached on the right."
               provenance={w.countyMap.provenance}
             >
-              <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
-                <div>
+              <div className="grid gap-x-8 gap-y-5 md:grid-cols-2 lg:flex-1">
+                <div className="lg:flex lg:flex-col">
                   <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-ink">
                     Most reached
                   </div>
@@ -416,7 +416,7 @@ export default function ExecutiveOverview() {
                     }))}
                   />
                 </div>
-                <div>
+                <div className="lg:flex lg:flex-col">
                   <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-ink">
                     Least reached
                   </div>

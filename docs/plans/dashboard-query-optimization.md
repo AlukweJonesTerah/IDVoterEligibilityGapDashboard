@@ -31,6 +31,7 @@ The new materialized views are derived from that table:
 | --- | --- |
 | `analytics.dashboard_people_mv` | One deduplicated row per person for fast demographic summaries |
 | `analytics.dashboard_overview_summary_mv` | One-row national headline summary |
+| `analytics.dashboard_partner_summary_mv` | Partner and programme-stream record comparison |
 | `analytics.dashboard_county_summary_mv` | Official 47-county reach summary |
 | `analytics.dashboard_course_category_summary_mv` | Training course-category totals |
 | `analytics.dashboard_course_summary_mv` | Training course leaderboard totals |
@@ -77,20 +78,16 @@ This gives the best tradeoff:
 When the data team reloads `analytics."20_million_by_2032"`, run:
 
 ```bash
-docker exec -i icta-dashboard-db psql \
-  -U icta_data_admin \
-  -d icta_dashboard \
-  -v ON_ERROR_STOP=1 \
-  -f db/live/004_refresh_dashboard_optimization_views.sql
+bun run db:check
+bun run db:refresh
 ```
 
-If running from outside the container, pass the SQL file through stdin:
+`db:check` is read-only and reports raw versus summarized row counts. `db:refresh` uses the configured `DATABASE_URL` and refreshes the views in dependency order.
+
+If a release changes `db/live/003_dashboard_optimization_views.sql`, rebuild the definitions once before routine refreshes:
 
 ```bash
-docker exec -i icta-dashboard-db psql \
-  -U icta_data_admin \
-  -d icta_dashboard \
-  -v ON_ERROR_STOP=1 < db/live/004_refresh_dashboard_optimization_views.sql
+bun run db:views
 ```
 
 The refresh order matters because several summary views depend on `analytics.dashboard_people_mv`.

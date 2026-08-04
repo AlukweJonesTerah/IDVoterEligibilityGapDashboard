@@ -16,6 +16,11 @@ type RankedRow = {
   color?: string;
 };
 
+type PartnerComparisonRow = {
+  partner: string;
+  records: number;
+};
+
 function RankedList({
   rows,
   color = "#007A3D",
@@ -82,7 +87,13 @@ function StackedBar({ segments }: { segments: { label: string; value: number; co
 
 export default function ExecutiveOverview() {
   const { widgets: w, error } = useDashboardData("/api/overview");
-  const { setFilters } = useFilters();
+  const { filters, setFilters } = useFilters();
+  const partnerRows: PartnerComparisonRow[] = w?.partnerComparison.data ?? [];
+  const smallestPartnerValue = Math.min(
+    ...partnerRows.map((row) => row.records).filter((value) => value > 0),
+    100
+  );
+  const partnerAxisMin = smallestPartnerValue >= 100 ? 100 : smallestPartnerValue >= 10 ? 10 : 1;
 
   // Per-card coverage: each inclusion card states only its own field's coverage.
   const incProv = (coverage: string) => (w ? { ...w.inclusion.provenance, coverage } : undefined);
@@ -171,6 +182,69 @@ export default function ExecutiveOverview() {
             </article>
           </section>
 
+          <Widget
+            title="Records by partner and programme stream"
+            help="Total records for each delivery partner or programme stream. Click a bar to filter the dashboard."
+            provenance={w.partnerComparison.provenance}
+          >
+            <EChart
+              height={280}
+              mobileHeight={300}
+              option={{
+                ...chartMotion,
+                aria: { enabled: true },
+                animationDelay: (idx: number) => idx * 18,
+                animationDelayUpdate: (idx: number) => idx * 8,
+                grid: { left: 8, right: 72, top: 12, bottom: 8, containLabel: true },
+                tooltip: {
+                  trigger: "axis",
+                  axisPointer: { type: "shadow" },
+                  valueFormatter: (value: number) => fmt(value)
+                },
+                xAxis: {
+                  type: "log",
+                  logBase: 10,
+                  min: partnerAxisMin,
+                  ...axisStyle,
+                  axisLabel: { ...axisStyle.axisLabel, formatter: (value: number) => fmtCompact(value) }
+                },
+                yAxis: {
+                  type: "category",
+                  inverse: true,
+                  data: partnerRows.map((row) => row.partner),
+                  ...axisStyle,
+                  axisLabel: { ...axisStyle.axisLabel, width: 120, overflow: "truncate" }
+                },
+                series: [
+                  {
+                    name: "Records",
+                    type: "bar",
+                    barMaxWidth: 16,
+                    itemStyle: { color: "#007A3D", borderRadius: [0, 2, 2, 0] },
+                    label: {
+                      show: true,
+                      position: "right",
+                      color: "#3A4856",
+                      fontSize: 11,
+                      formatter: ({ value }: { value: number }) => fmt(value)
+                    },
+                    data: partnerRows.map((row) => ({
+                      name: row.partner,
+                      value: row.records,
+                      itemStyle: { opacity: !filters.partner || filters.partner === row.partner ? 1 : 0.28 }
+                    }))
+                  }
+                ]
+              }}
+              onEvents={{
+                click: (params: { name?: string }) => {
+                  if (params.name) setFilters({ partner: filters.partner === params.name ? null : params.name });
+                }
+              }}
+            />
+            <p className="mt-1 text-[11px] text-mute">Logarithmic scale keeps smaller partners visible. Click a bar to filter every page, then click it again to compare all.</p>
+          </Widget>
+
           {/* Main visual area: map + demographic highlights */}
           <section className="grid gap-4 lg:grid-cols-3">
             <Widget title="Reach by county" help="Unique learners by county. Darker red means more learners. Click a county to filter the whole dashboard to it." provenance={w.countyMap.provenance}>
@@ -208,7 +282,7 @@ export default function ExecutiveOverview() {
                   }}
                 />
               ) : (
-                <UnavailableNote reason="No partial demographic source records are available for the current county filter. Course and date filters are not available in these demographic source tables." />
+                <UnavailableNote reason="No age-group records are available for the current filters." />
               )}
             </Widget>
             <Widget title="Disability inclusion" help="Pooled records with a disability response: reported disability versus none." provenance={w.disability.provenance}>

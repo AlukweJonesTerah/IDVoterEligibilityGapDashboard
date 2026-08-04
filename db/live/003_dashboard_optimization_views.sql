@@ -15,6 +15,7 @@ DROP MATERIALIZED VIEW IF EXISTS analytics.dashboard_gender_summary_mv;
 DROP MATERIALIZED VIEW IF EXISTS analytics.dashboard_course_summary_mv;
 DROP MATERIALIZED VIEW IF EXISTS analytics.dashboard_course_category_summary_mv;
 DROP MATERIALIZED VIEW IF EXISTS analytics.dashboard_county_summary_mv;
+DROP MATERIALIZED VIEW IF EXISTS analytics.dashboard_partner_summary_mv;
 DROP MATERIALIZED VIEW IF EXISTS analytics.dashboard_overview_summary_mv;
 DROP MATERIALIZED VIEW IF EXISTS analytics.dashboard_people_mv;
 
@@ -142,6 +143,15 @@ FROM raw_totals, county_totals, people_totals, completion_totals;
 
 CREATE UNIQUE INDEX dashboard_overview_summary_mv_one_idx ON analytics.dashboard_overview_summary_mv ((true));
 
+CREATE MATERIALIZED VIEW analytics.dashboard_partner_summary_mv AS
+SELECT trim(source) AS partner,
+       count(*)::int AS records
+FROM analytics."20_million_by_2032"
+WHERE source IS NOT NULL AND trim(source) <> ''
+GROUP BY trim(source);
+
+CREATE UNIQUE INDEX dashboard_partner_summary_mv_partner_idx ON analytics.dashboard_partner_summary_mv (partner);
+
 CREATE MATERIALIZED VIEW analytics.dashboard_county_summary_mv AS
 WITH kenya_counties(county_norm, county_name) AS (
   VALUES
@@ -190,7 +200,8 @@ SELECT course_category AS category,
          nullif(trim(record_id), '')
        ))::int AS learners
 FROM analytics."20_million_by_2032"
-WHERE source = 'Training'
+WHERE trim(source) IN ('Training', 'Ajira Portal', 'ICTA Standards')
+  AND course_category IS NOT NULL AND trim(course_category) <> ''
 GROUP BY course_category;
 
 CREATE UNIQUE INDEX dashboard_course_category_summary_mv_category_idx ON analytics.dashboard_course_category_summary_mv (category);
@@ -207,7 +218,8 @@ SELECT course_taken AS course,
          nullif(trim(record_id), '')
        ))::int AS learners
 FROM analytics."20_million_by_2032"
-WHERE source = 'Training'
+WHERE trim(source) IN ('Training', 'Ajira Portal', 'ICTA Standards')
+  AND course_taken IS NOT NULL AND trim(course_taken) <> ''
 GROUP BY course_taken, course_category;
 
 CREATE UNIQUE INDEX dashboard_course_summary_mv_course_idx ON analytics.dashboard_course_summary_mv (course, category);
@@ -265,7 +277,7 @@ WITH training AS (
          ))::int AS registered,
          count(*)::int AS enrolled
   FROM analytics."20_million_by_2032"
-  WHERE source = 'Training'
+  WHERE trim(source) IN ('Training', 'Ajira Portal', 'ICTA Standards')
 ),
 completion AS (
   SELECT count(*)::int AS records,
@@ -312,13 +324,15 @@ SELECT date_trained::text AS day,
          nullif(trim(record_id), '')
        ))::int AS learners
 FROM analytics."20_million_by_2032"
-WHERE source = 'Training'
+WHERE trim(source) IN ('Training', 'Ajira Portal', 'ICTA Standards')
+  AND date_trained IS NOT NULL
 GROUP BY 1;
 
 CREATE UNIQUE INDEX dashboard_pipeline_daily_activity_mv_day_idx ON analytics.dashboard_pipeline_daily_activity_mv (day);
 
 ANALYZE analytics.dashboard_people_mv;
 ANALYZE analytics.dashboard_overview_summary_mv;
+ANALYZE analytics.dashboard_partner_summary_mv;
 ANALYZE analytics.dashboard_county_summary_mv;
 ANALYZE analytics.dashboard_course_category_summary_mv;
 ANALYZE analytics.dashboard_course_summary_mv;

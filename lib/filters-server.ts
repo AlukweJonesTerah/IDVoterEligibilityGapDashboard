@@ -2,12 +2,13 @@ import type { NextRequest } from "next/server";
 import { normSql, PROGRAMME_TABLE, personKeySql } from "./source-sql";
 
 // Global dashboard filters. Every page API accepts these as query params and
-// binds them as $1..$4 in every query, so extra params start at $5.
+// binds them as $1..$5 in every query, so extra params start at $6.
 export interface Filters {
   county: string | null;
   category: string | null;
   from: string | null;
   to: string | null;
+  partner: string | null;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -19,25 +20,27 @@ export function readFilters(req: NextRequest): Filters {
     county: p.get("fcounty") || null,
     category: p.get("fcategory") || null,
     from: date(p.get("ffrom")),
-    to: date(p.get("fto"))
+    to: date(p.get("fto")),
+    partner: p.get("fpartner") || null
   };
 }
 
-export const filterValues = (f: Filters) => [f.county, f.category, f.from, f.to];
+export const filterValues = (f: Filters) => [f.county, f.category, f.from, f.to, f.partner];
 
 export function isUnfiltered(f: Filters) {
-  return !f.county && !f.category && !f.from && !f.to;
+  return !f.county && !f.category && !f.from && !f.to && !f.partner;
 }
 
 /**
  * WHERE fragment applying the global filters to a table alias that has
- * county, course_category and date_trained columns ($1..$4).
+ * county, course_category, date_trained and source columns ($1..$5).
  */
 export const filterSql = (a: string) => `
   ($1::text IS NULL OR ${normSql(`${a}.county`)} = ${normSql("$1::text")})
   AND ($2::text IS NULL OR ${a}.course_category = $2::text)
   AND ($3::date IS NULL OR ${a}.date_trained >= $3::date)
-  AND ($4::date IS NULL OR ${a}.date_trained <= $4::date)`;
+  AND ($4::date IS NULL OR ${a}.date_trained <= $4::date)
+  AND ($5::text IS NULL OR ${normSql(`${a}.source`)} = ${normSql("$5::text")})`;
 
 /**
  * Learner-scope fragment for derived tables keyed by person_key: a person is

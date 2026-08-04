@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "db:check": "node --env-file-if-exists=.env scripts/refresh-dashboard.mjs --check",
+    "db:refresh": "node --env-file-if-exists=.env scripts/refresh-dashboard.mjs",
+    "db:views": "node --env-file-if-exists=.env scripts/refresh-dashboard.mjs --rebuild",
     "db:fixture": "node db/dev/seed-training-fixture.mjs",
     "db:sample": "docker exec -i icta-dashboard-db psql -U icta_dashboard -d icta_dashboard -v ON_ERROR_STOP=1 -f - < db/sample/001_generate_sample_lane.sql"
   },

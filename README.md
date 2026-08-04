@@ -19,6 +19,15 @@ npm run dev                     # http://127.0.0.1:3002
 
 Against production, skip `db:fixture` (the real table is loaded there) and point `DATABASE_URL` at the server. `db/sample/001_generate_sample_lane.sql` is deterministic (hash-based) and safe to re-run; it only enriches real records and updates the registry.
 
+When the data team reloads `analytics."20_million_by_2032"`, refresh the dashboard summaries without rebuilding the app:
+
+```bash
+bun run db:check     # compare raw and summarized row counts
+bun run db:refresh   # refresh existing materialized summaries
+```
+
+Run `bun run db:views` once after deploying a change to the summary definitions. The dashboard API cache expires after five minutes by default, or immediately when the app process restarts.
+
 ## Services
 
 - `postgres`: PostgreSQL 16, exposed on `${POSTGRES_HOST_PORT:-15424}` for data-team ingestion.

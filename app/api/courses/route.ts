@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { readFilters, filterValues, filterSql, isUnfiltered } from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
-import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
+import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE, trainingRecordSql } from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
               count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
-       WHERE t.source = 'Training' AND ${filterSql("t")}
+       WHERE ${trainingRecordSql("t")} AND ${nonBlankSql("t.course_taken")} AND ${filterSql("t")}
        GROUP BY t.course_taken, t.course_category
        ORDER BY enrolments DESC`,
         params
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
         `SELECT t.course_category AS category, count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
-       WHERE t.source = 'Training' AND ${filterSql("t")}
+       WHERE ${trainingRecordSql("t")} AND ${nonBlankSql("t.course_category")} AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 2 DESC`,
         params
       ),
@@ -61,19 +61,19 @@ export async function GET(req: NextRequest) {
       courses: {
         data: courses.rows,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
-          note: "Course enrolments and learners are scoped to source = Training within analytics.20_million_by_2032."
+          note: "Course enrolments and learners use training partner records with a populated course name."
         })
       },
       categories: {
         data: categories.rows,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
-          note: "Course categories are populated on the Training stream only."
+          note: "Course categories come from training partner records where the source supplied a category."
         })
       },
       registrations: {
         data: source,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
-          coverage: `${fmt(source.total)} combined source records across ${source.sources} source streams; gender present on ${fmt(source.gender_known)} records.`,
+          coverage: `${fmt(source.total)} combined source records across ${source.sources} partner or programme streams; gender present on ${fmt(source.gender_known)} records.`,
           note: "This is the combined live source table, not a separate registration feed."
         })
       }

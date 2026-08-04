@@ -37,7 +37,7 @@ export default function CoursesAndPipelinePage() {
   return (
       <PageShell
       title="Course Performance & Training Pipeline"
-      subtitle="What learners take in the Training stream, plus completion fields received so far from the combined live source."
+      subtitle="Training activity across partners, plus completion fields received so far from the combined live source."
     >
       {/* Summary cards */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -47,7 +47,7 @@ export default function CoursesAndPipelinePage() {
           label="Combined source records"
           help="All records in the combined 20 million by 2032 source table for the current filter scope."
           value={fmt(c.registrations.data.total)}
-          sub="Training, Citizens and KICTANET streams"
+          sub="records in the current partner scope"
           provenance={c.registrations.provenance}
         />
         <Kpi

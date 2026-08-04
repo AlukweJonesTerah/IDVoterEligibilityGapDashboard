@@ -1,6 +1,12 @@
 export const PROGRAMME_TABLE = `analytics."20_million_by_2032"`;
 export const PROGRAMME_DATASET_KEY = "programme_participants";
 
+// Source values that represent training delivery. Ajira Portal records do not
+// carry course names, so training scope cannot be inferred from course_taken.
+export function trainingRecordSql(alias: string) {
+  return `trim(${alias}.source) IN ('Training', 'Ajira Portal', 'ICTA Standards')`;
+}
+
 const KENYA_COUNTIES = [
   "Mombasa",
   "Kwale",

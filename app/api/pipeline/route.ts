@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getRegistry, provenanceFor } from "@/lib/provenance";
 import { readFilters, filterValues, filterSql, isUnfiltered } from "@/lib/filters-server";
 import { fmt } from "@/lib/format";
-import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE } from "@/lib/source-sql";
+import { nonBlankSql, personKeySql, PROGRAMME_DATASET_KEY, PROGRAMME_TABLE, trainingRecordSql } from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         `SELECT count(DISTINCT ${personKeySql("t")})::int AS registered,
               count(*)::int AS enrolled
        FROM ${PROGRAMME_TABLE} t
-       WHERE t.source = 'Training' AND ${filterSql("t")}`,
+       WHERE ${trainingRecordSql("t")} AND ${filterSql("t")}`,
         params
       ),
     useSummary
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
         `SELECT t.date_trained::text AS day, count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
-       WHERE t.source = 'Training' AND ${filterSql("t")}
+       WHERE ${trainingRecordSql("t")} AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 1`,
         params
       )
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
         },
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
           status: "partial",
-          coverage: `Registered and enrolled are scoped to Training records; ${fmt(comp.records)} records have completion fields.`,
+          coverage: `Registered and enrolled are scoped to the Training, Ajira Portal and ICTA Standards streams; ${fmt(comp.records)} records have completion fields.`,
           note: "Started, completed and certified stages cannot be computed nationally from current source data."
         })
       },
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
       dailyActivity: {
         data: dailyActivity.rows,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
-          note: "Daily activity is scoped to source = Training because date_trained is populated on training records."
+          note: "Daily activity uses dated training partner records. Ajira Portal and ICTA Standards currently have no training dates."
         })
       }
     }

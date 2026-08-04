@@ -112,13 +112,13 @@ function CountyCombobox({
 
 export function FilterBar() {
   const { filters, setFilters, clear, active } = useFilters();
-  const [meta, setMeta] = useState<{ counties: string[]; categories: string[] } | null>(null);
+  const [meta, setMeta] = useState<{ counties: string[]; categories: string[]; partners: string[] } | null>(null);
 
   useEffect(() => {
     fetch("/api/meta")
       .then((r) => r.json())
       .then(setMeta)
-      .catch(() => setMeta({ counties: [], categories: [] }));
+      .catch(() => setMeta({ counties: [], categories: [], partners: [] }));
   }, []);
 
   return (
@@ -128,6 +128,20 @@ export function FilterBar() {
         value={filters.county}
         onChange={(county) => setFilters({ county })}
       />
+
+      <select
+        aria-label="Partner or data source"
+        className={selectClass}
+        value={filters.partner ?? ""}
+        onChange={(e) => setFilters({ partner: e.target.value || null })}
+      >
+        <option value="">All partners / sources</option>
+        {meta?.partners.map((partner) => (
+          <option key={partner} value={partner}>
+            {partner}
+          </option>
+        ))}
+      </select>
 
       <select
         aria-label="Course category"

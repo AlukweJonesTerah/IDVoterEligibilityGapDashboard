@@ -11,13 +11,14 @@ import {
   nonBlankSql,
   personKeySql,
   PROGRAMME_DATASET_KEY,
-  PROGRAMME_TABLE
+  PROGRAMME_TABLE,
+  trainingRecordSql
 } from "@/lib/source-sql";
 
 export const dynamic = "force-dynamic";
 
 const TABLE_NOTE =
-  "From analytics.20_million_by_2032, the combined source covering Training, Citizens and KICTANET streams. Course and date filters only apply where those fields exist.";
+  "From analytics.20_million_by_2032, the combined source covering all current partner and programme streams. Course and date filters only apply where those fields exist.";
 
 export async function GET(req: NextRequest) {
   return cachedJson(req, "overview", async () => {
@@ -25,8 +26,13 @@ export async function GET(req: NextRequest) {
   const filters = readFilters(req);
   const params = filterValues(filters);
   const useSummary = isUnfiltered(filters);
+  // Keep the comparison across all partners while applying the other global
+  // filters. This lets a selected partner remain visibly comparable.
+  const comparisonFilters = { ...filters, partner: null };
+  const comparisonParams = filterValues(comparisonFilters);
+  const usePartnerSummary = isUnfiltered(comparisonFilters);
 
-  const [totals, categories, courseLeaderboard, countyMap, pool, age, disability, education, completion] = await Promise.all([
+  const [totals, partnerComparison, categories, courseLeaderboard, countyMap, pool, age, disability, education, completion] = await Promise.all([
     useSummary
       ? db.query(`SELECT enrolments, unique_learners, counties, courses, first_date, last_date FROM analytics.dashboard_overview_summary_mv`)
       : db.query(
@@ -41,12 +47,23 @@ export async function GET(req: NextRequest) {
        WHERE ${filterSql("t")}`,
         params
       ),
+    usePartnerSummary
+      ? db.query(`SELECT partner, records FROM analytics.dashboard_partner_summary_mv ORDER BY records DESC`)
+      : db.query(
+        `SELECT trim(t.source) AS partner,
+              count(*)::int AS records
+       FROM ${PROGRAMME_TABLE} t
+       WHERE ${nonBlankSql("t.source")} AND ${filterSql("t")}
+       GROUP BY trim(t.source)
+       ORDER BY records DESC`,
+        comparisonParams
+      ),
     useSummary
       ? db.query(`SELECT course_category, enrolments FROM analytics.dashboard_course_category_summary_mv ORDER BY enrolments DESC`)
       : db.query(
         `SELECT t.course_category, count(*)::int AS enrolments
        FROM ${PROGRAMME_TABLE} t
-       WHERE t.source = 'Training' AND ${filterSql("t")}
+       WHERE ${trainingRecordSql("t")} AND ${nonBlankSql("t.course_category")} AND ${filterSql("t")}
        GROUP BY 1 ORDER BY 2 DESC`,
         params
       ),
@@ -57,7 +74,7 @@ export async function GET(req: NextRequest) {
               count(*)::int AS enrolments,
               count(DISTINCT ${personKeySql("t")})::int AS learners
        FROM ${PROGRAMME_TABLE} t
-       WHERE t.source = 'Training' AND ${filterSql("t")}
+       WHERE ${trainingRecordSql("t")} AND ${nonBlankSql("t.course_taken")} AND ${filterSql("t")}
        GROUP BY t.course_taken, t.course_category
        ORDER BY enrolments DESC`,
         params
@@ -188,16 +205,22 @@ export async function GET(req: NextRequest) {
         },
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], { note: TABLE_NOTE })
       },
+      partnerComparison: {
+        data: partnerComparison.rows,
+        provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
+          note: "Compares total records across every partner or programme stream. The selected partner is highlighted while the other global filters remain applied."
+        })
+      },
       categories: {
         data: categories.rows,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
-          note: "Course categories come from the Training stream inside the combined source table."
+          note: "Course categories come from training records with a populated course category, including ICTA Standards."
         })
       },
       courseLeaderboard: {
         data: courseLeaderboard.rows,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
-          note: "Course enrolments and learners are scoped to source = Training within analytics.20_million_by_2032."
+          note: "Course enrolments and learners use training partner records with a populated course name."
         })
       },
       countyMap: {

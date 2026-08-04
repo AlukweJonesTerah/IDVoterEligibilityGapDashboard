@@ -5,12 +5,13 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 export interface FilterState {
   county: string | null;
   category: string | null;
+  partner: string | null;
   preset: string; // 'all' | 'today' | '7d' | '30d' | 'month' | 'quarter' | 'year' | 'custom'
   from: string | null;
   to: string | null;
 }
 
-const EMPTY: FilterState = { county: null, category: null, preset: "all", from: null, to: null };
+const EMPTY: FilterState = { county: null, category: null, partner: null, preset: "all", from: null, to: null };
 
 interface FilterContextValue {
   filters: FilterState;
@@ -65,6 +66,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams();
     if (filters.county) params.set("fcounty", filters.county);
     if (filters.category) params.set("fcategory", filters.category);
+    if (filters.partner) params.set("fpartner", filters.partner);
     if (dates.from) params.set("ffrom", dates.from);
     if (dates.to) params.set("fto", dates.to);
     const queryString = params.toString();

@@ -3,6 +3,7 @@
 
 REFRESH MATERIALIZED VIEW analytics.dashboard_people_mv;
 REFRESH MATERIALIZED VIEW analytics.dashboard_overview_summary_mv;
+REFRESH MATERIALIZED VIEW analytics.dashboard_partner_summary_mv;
 REFRESH MATERIALIZED VIEW analytics.dashboard_county_summary_mv;
 REFRESH MATERIALIZED VIEW analytics.dashboard_course_category_summary_mv;
 REFRESH MATERIALIZED VIEW analytics.dashboard_course_summary_mv;
@@ -19,6 +20,7 @@ REFRESH MATERIALIZED VIEW analytics.dashboard_pipeline_daily_activity_mv;
 ANALYZE analytics."20_million_by_2032";
 ANALYZE analytics.dashboard_people_mv;
 ANALYZE analytics.dashboard_overview_summary_mv;
+ANALYZE analytics.dashboard_partner_summary_mv;
 ANALYZE analytics.dashboard_county_summary_mv;
 ANALYZE analytics.dashboard_course_category_summary_mv;
 ANALYZE analytics.dashboard_course_summary_mv;

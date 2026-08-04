@@ -12,6 +12,7 @@ services:
     volumes:
       - icta_dashboard_pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ./db/live:/dashboard-sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -21,12 +22,16 @@ services:
   app:
     build:
       context: .
+      args:
+        NEXT_PUBLIC_DASHBOARD_REFRESH_MS: ${NEXT_PUBLIC_DASHBOARD_REFRESH_MS:-600000}
     container_name: icta-dashboard-app
     restart: unless-stopped
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ICTA Dashboard}
       DATABASE_URL: ${DATABASE_URL:?missing DATABASE_URL}
+      ICTA_API_CACHE_TTL_MS: ${ICTA_API_CACHE_TTL_MS:-600000}
+      ICTA_CACHE_VERSION_CHECK_MS: ${ICTA_CACHE_VERSION_CHECK_MS:-30000}
     depends_on:
       postgres:
         condition: service_healthy

@@ -38,7 +38,30 @@ async function state() {
                last_date AS latest_training_date
         FROM analytics.dashboard_overview_summary_mv`)).rows[0]
     : null;
-  return { raw: raw.rows[0], summary };
+  const refreshStateExists = (await client.query(
+    "SELECT to_regclass('app.dashboard_refresh_state') IS NOT NULL AS ok"
+  )).rows[0].ok;
+  const refreshState = refreshStateExists
+    ? (await client.query(`
+        SELECT source_version::text, refreshed_version::text, dirty_at,
+               refreshed_at, last_refresh_duration_ms
+        FROM app.dashboard_refresh_state
+        WHERE singleton = true`)).rows[0]
+    : null;
+  return { raw: raw.rows[0], summary, refreshState };
+}
+
+async function markRefreshComplete() {
+  const refreshStateExists = (await client.query(
+    "SELECT to_regclass('app.dashboard_refresh_state') IS NOT NULL AS ok"
+  )).rows[0].ok;
+  if (!refreshStateExists) return;
+
+  await client.query(`
+    UPDATE app.dashboard_refresh_state
+    SET refreshed_version = source_version,
+        refreshed_at = clock_timestamp()
+    WHERE singleton = true`);
 }
 
 try {
@@ -57,6 +80,7 @@ try {
   console.log(`Refreshing database "${dbInfo.db}" as "${dbInfo.usr}" using ${sqlFile}`);
   console.log("Before:", await state());
   await client.query(readFileSync(sqlFile, "utf8"));
+  await markRefreshComplete();
   console.log("After:", await state());
   console.log(rebuild ? "Dashboard summary definitions rebuilt." : "Dashboard summaries refreshed.");
   }

@@ -10,6 +10,10 @@ export interface Widgets {
 }
 
 const clientCache = new Map<string, Widgets>();
+const configuredRefreshMs = Number(process.env.NEXT_PUBLIC_DASHBOARD_REFRESH_MS ?? 10 * 60_000);
+const browserRefreshMs = Number.isFinite(configuredRefreshMs) && configuredRefreshMs > 0
+  ? configuredRefreshMs
+  : 10 * 60_000;
 
 export function useDashboardData(endpoint: string) {
   const { queryString } = useFilters();
@@ -20,6 +24,7 @@ export function useDashboardData(endpoint: string) {
 
   useEffect(() => {
     let cancelled = false;
+    let requestInFlight = false;
     const cached = clientCache.get(url);
     if (cached) {
       setWidgets(cached);
@@ -27,23 +32,42 @@ export function useDashboardData(endpoint: string) {
     } else {
       setWidgets(null);
     }
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`${url} responded ${r.status}`);
-        return r.json();
-      })
-      .then((json) => {
-        if (!cancelled) {
-          clientCache.set(url, json.widgets);
-          setWidgets(json.widgets);
-          setError(null);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) setError(String(e));
-      });
+    const load = () => {
+      if (requestInFlight) return;
+      requestInFlight = true;
+      fetch(url, { cache: "no-store" })
+        .then((r) => {
+          if (!r.ok) throw new Error(`${url} responded ${r.status}`);
+          return r.json();
+        })
+        .then((json) => {
+          if (!cancelled) {
+            clientCache.set(url, json.widgets);
+            setWidgets(json.widgets);
+            setError(null);
+          }
+        })
+        .catch((e) => {
+          if (!cancelled) setError(String(e));
+        })
+        .finally(() => {
+          requestInFlight = false;
+        });
+    };
+
+    load();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, browserRefreshMs);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [url]);
 

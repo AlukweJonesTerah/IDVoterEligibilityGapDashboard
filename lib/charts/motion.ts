@@ -37,7 +37,12 @@ export function donutOption(
   colors: string[]
 ): Record<string, unknown> {
   const total = rows.reduce((s, r) => s + r.value, 0) || 1;
-  const pct = Object.fromEntries(rows.map((r) => [r.name, Math.round((100 * r.value) / total)]));
+  const pct = Object.fromEntries(
+    rows.map((r) => {
+      const share = (100 * r.value) / total;
+      return [r.name, share > 0 && share < 1 ? share.toFixed(1) : Math.round(share).toString()];
+    })
+  );
   return {
     ...chartMotion,
     color: colors,
@@ -56,8 +61,8 @@ export function donutOption(
     series: [
       {
         type: "pie",
-        // Sized so the ring clears a legend of up to three rows even in
-        // short cards; percentages live in the legend and tooltip.
+        // Sized so the ring clears a compact multi-row legend even in short
+        // cards; percentages live in the legend and tooltip.
         radius: ["38%", "58%"],
         center: ["50%", "36%"],
         label: { show: false },

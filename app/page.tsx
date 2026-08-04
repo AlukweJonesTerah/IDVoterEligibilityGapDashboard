@@ -21,6 +21,37 @@ type PartnerComparisonRow = {
   records: number;
 };
 
+type CourseCategoryRow = {
+  course_category: string;
+  enrolments: number;
+};
+
+const ICTA_STANDARDS_CATEGORIES = new Set([
+  "systems and applications standard training",
+  "it governance standard training",
+  "information security standard training",
+  "e-records management standards training"
+]);
+
+function consolidateStandardsCategories(rows: CourseCategoryRow[]): {
+  rows: RankedRow[];
+  standardsRecords: number;
+  combined: boolean;
+} {
+  const standards = rows.filter((row) => ICTA_STANDARDS_CATEGORIES.has(row.course_category.trim().toLowerCase()));
+  const regular = rows.filter((row) => !ICTA_STANDARDS_CATEGORIES.has(row.course_category.trim().toLowerCase()));
+  const standardsRecords = standards.reduce((sum, row) => sum + row.enrolments, 0);
+  const combined = standards.length > 1;
+  const categoryRows = [
+    ...regular.map((row) => ({ label: labelCase(row.course_category), value: row.enrolments })),
+    ...(combined
+      ? [{ label: "ICTA Standards training", value: standardsRecords }]
+      : standards.map((row) => ({ label: labelCase(row.course_category), value: row.enrolments })))
+  ].sort((a, b) => b.value - a.value);
+
+  return { rows: categoryRows, standardsRecords, combined };
+}
+
 function RankedList({
   rows,
   color = "#007A3D",
@@ -51,6 +82,66 @@ function RankedList({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function RankedTable({
+  rows,
+  rankStart = 1
+}: {
+  rows: RankedRow[];
+  rankStart?: number;
+}) {
+  return (
+    <div className="overflow-hidden rounded border border-hair2">
+      <table className="w-full border-collapse text-left text-[11px]">
+        <thead className="bg-canvas text-[10px] uppercase tracking-wide text-mute">
+          <tr>
+            <th className="w-9 px-2.5 py-2 font-semibold">Rank</th>
+            <th className="px-2.5 py-2 font-semibold">County</th>
+            <th className="px-2.5 py-2 text-right font-semibold">Learners</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.label} className="border-t border-hair2">
+              <td className="tnum px-2.5 py-2 text-mute">{rankStart + index}</td>
+              <td className="px-2.5 py-2 text-subink">{row.label}</td>
+              <td className="tnum px-2.5 py-2 text-right font-semibold text-ink">{fmt(row.value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ProfileTable({ rows }: { rows: RankedRow[] }) {
+  const total = rows.reduce((sum, row) => sum + row.value, 0) || 1;
+
+  return (
+    <div className="overflow-hidden rounded border border-hair2">
+      <table className="w-full border-collapse text-left text-[11px]">
+        <thead className="bg-canvas text-[10px] uppercase tracking-wide text-mute">
+          <tr>
+            <th className="px-2.5 py-2 font-semibold">Education level</th>
+            <th className="px-2.5 py-2 text-right font-semibold">Records</th>
+            <th className="px-2.5 py-2 text-right font-semibold">Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label} className="border-t border-hair2">
+              <td className="px-2.5 py-2 text-subink">{row.label}</td>
+              <td className="tnum px-2.5 py-2 text-right font-semibold text-ink">{fmt(row.value)}</td>
+              <td className="tnum px-2.5 py-2 text-right text-subink">
+                {((row.value / total) * 100).toFixed(1)}%
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -94,6 +185,7 @@ export default function ExecutiveOverview() {
     100
   );
   const partnerAxisMin = smallestPartnerValue >= 100 ? 100 : smallestPartnerValue >= 10 ? 10 : 1;
+  const categorySummary = consolidateStandardsCategories(w?.categories.data ?? []);
 
   // Per-card coverage: each inclusion card states only its own field's coverage.
   const incProv = (coverage: string) => (w ? { ...w.inclusion.provenance, coverage } : undefined);
@@ -317,9 +409,7 @@ export default function ExecutiveOverview() {
                   <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-ink">
                     Most reached
                   </div>
-                  <RankedList
-                    maxRows={5}
-                    color="#007A3D"
+                  <RankedTable
                     rows={w.countyMap.data.slice(0, 5).map((d: { county_label: string; learners: number }) => ({
                       label: d.county_label,
                       value: d.learners
@@ -330,9 +420,8 @@ export default function ExecutiveOverview() {
                   <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-ink">
                     Least reached
                   </div>
-                  <RankedList
-                    maxRows={5}
-                    color="#66C695"
+                  <RankedTable
+                    rankStart={Math.max(1, w.countyMap.data.length - 4)}
                     rows={w.countyMap.data
                       .slice(-5)
                       .map((d: { county_label: string; learners: number }) => ({
@@ -345,20 +434,22 @@ export default function ExecutiveOverview() {
             </Widget>
             <Widget
               title="Course categories"
-              help="Share of training-stream enrolments across the course categories."
+              help="Share of training-stream records across course categories. ICTA Standards categories are combined here to keep the overview readable."
               provenance={w.categories.provenance}
             >
               <EChart
                 height={300}
                 mobileHeight={250}
                 option={donutOption(
-                  w.categories.data.map((d: { course_category: string; enrolments: number }) => ({
-                    name: labelCase(d.course_category),
-                    value: d.enrolments
-                  })),
+                  categorySummary.rows.map((row) => ({ name: row.label, value: row.value })),
                   chartPalette
                 )}
               />
+              {categorySummary.combined ? (
+                <p className="mt-1 text-[11px] text-mute">
+                  ICTA Standards training combines four categories with {fmt(categorySummary.standardsRecords)} records. Select ICTA Standards or a category above for detail.
+                </p>
+              ) : null}
             </Widget>
           </section>
 
@@ -387,10 +478,8 @@ export default function ExecutiveOverview() {
               provenance={w.education.provenance}
             >
               {w.education.data.length ? (
-                <RankedList
-                  maxRows={6}
-                  color="#007A3D"
-                  rows={w.education.data.map((d: { label: string; learners: number }) => ({
+                <ProfileTable
+                  rows={w.education.data.slice(0, 6).map((d: { label: string; learners: number }) => ({
                     label: labelCase(d.label),
                     value: d.learners
                   }))}

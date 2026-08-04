@@ -26,7 +26,25 @@ bun run db:check     # compare raw and summarized row counts
 bun run db:refresh   # refresh existing materialized summaries
 ```
 
-Run `bun run db:views` once after deploying a change to the summary definitions. The dashboard API cache expires after five minutes by default, or immediately when the app process restarts.
+Run `bun run db:views` once after deploying a change to the summary definitions. The dashboard API cache expires after ten minutes by default, and clears early whenever the summary refresh generation advances.
+
+### Automatic data refresh
+
+Production uses a statement-level trigger to mark dashboard summaries as dirty after a committed insert, update, delete, or truncate. A one-shot cron check runs every ten minutes. Clean checks read one state row and exit; dirty checks refresh the materialized views, validate the source and summary row counts, and advance the cache generation. The app then clears cached API responses without restarting.
+
+Install or repair the trigger and the current user's idempotent cron entry from the production repository:
+
+```bash
+bun run db:auto:install
+```
+
+Run the same dirty check manually when needed:
+
+```bash
+bun run db:auto:run
+```
+
+Open browser pages fetch their current dashboard API again every ten minutes while visible. `ICTA_API_CACHE_TTL_MS`, `ICTA_CACHE_VERSION_CHECK_MS`, and `NEXT_PUBLIC_DASHBOARD_REFRESH_MS` control the server TTL, cache-generation check, and browser refresh interval respectively. If an ingestion process drops and recreates the source table, rerun `db:auto:install` because PostgreSQL drops table triggers with the table.
 
 ## Services
 

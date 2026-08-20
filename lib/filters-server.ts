@@ -2,12 +2,13 @@ import type { NextRequest } from "next/server";
 import { normSql, PROGRAMME_TABLE, personKeySql } from "./source-sql";
 
 // Global dashboard filters. Every page API accepts these as query params and
-// binds them as $1..$5 in every query, so extra params start at $6.
+// binds them as $1..$6 in every query, so extra params start at $7.
 export interface Filters {
   county: string | null;
   category: string | null;
   from: string | null;
   to: string | null;
+  source: string | null;
   partner: string | null;
 }
 
@@ -21,26 +22,31 @@ export function readFilters(req: NextRequest): Filters {
     category: p.get("fcategory") || null,
     from: date(p.get("ffrom")),
     to: date(p.get("fto")),
+    source: p.get("fsource") || null,
     partner: p.get("fpartner") || null
   };
 }
 
-export const filterValues = (f: Filters) => [f.county, f.category, f.from, f.to, f.partner];
+export const filterValues = (f: Filters) => [f.county, f.category, f.from, f.to, f.source, f.partner];
 
 export function isUnfiltered(f: Filters) {
-  return !f.county && !f.category && !f.from && !f.to && !f.partner;
+  // Local development often uses a source-table-only reporting account. It
+  // also benefits from exercising the same raw query path used by filters.
+  if (process.env.NODE_ENV !== "production") return false;
+  return !f.county && !f.category && !f.from && !f.to && !f.source && !f.partner;
 }
 
 /**
  * WHERE fragment applying the global filters to a table alias that has
- * county, course_category, date_trained and source columns ($1..$5).
+ * county, course_category, date_trained, source and partner columns ($1..$6).
  */
 export const filterSql = (a: string) => `
   ($1::text IS NULL OR ${normSql(`${a}.county`)} = ${normSql("$1::text")})
   AND ($2::text IS NULL OR ${a}.course_category = $2::text)
   AND ($3::date IS NULL OR ${a}.date_trained >= $3::date)
   AND ($4::date IS NULL OR ${a}.date_trained <= $4::date)
-  AND ($5::text IS NULL OR ${normSql(`${a}.source`)} = ${normSql("$5::text")})`;
+  AND ($5::text IS NULL OR ${normSql(`${a}.source`)} = ${normSql("$5::text")})
+  AND ($6::text IS NULL OR ${normSql(`${a}.partner`)} = ${normSql("$6::text")})`;
 
 /**
  * Learner-scope fragment for derived tables keyed by person_key: a person is

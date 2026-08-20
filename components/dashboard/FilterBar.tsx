@@ -112,13 +112,18 @@ function CountyCombobox({
 
 export function FilterBar() {
   const { filters, setFilters, clear, active } = useFilters();
-  const [meta, setMeta] = useState<{ counties: string[]; categories: string[]; partners: string[] } | null>(null);
+  const [meta, setMeta] = useState<{
+    counties: string[];
+    categories: string[];
+    sources: string[];
+    partners: string[];
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/meta")
       .then((r) => r.json())
       .then(setMeta)
-      .catch(() => setMeta({ counties: [], categories: [], partners: [] }));
+      .catch(() => setMeta({ counties: [], categories: [], sources: [], partners: [] }));
   }, []);
 
   return (
@@ -130,15 +135,29 @@ export function FilterBar() {
       />
 
       <select
-        aria-label="Partner or data source"
+        aria-label="Training partner"
         className={selectClass}
         value={filters.partner ?? ""}
         onChange={(e) => setFilters({ partner: e.target.value || null })}
       >
-        <option value="">All partners / sources</option>
+        <option value="">All training partners</option>
         {meta?.partners.map((partner) => (
           <option key={partner} value={partner}>
             {partner}
+          </option>
+        ))}
+      </select>
+
+      <select
+        aria-label="Source or programme stream"
+        className={selectClass}
+        value={filters.source ?? ""}
+        onChange={(e) => setFilters({ source: e.target.value || null })}
+      >
+        <option value="">All sources / streams</option>
+        {meta?.sources.map((source) => (
+          <option key={source} value={source}>
+            {source}
           </option>
         ))}
       </select>

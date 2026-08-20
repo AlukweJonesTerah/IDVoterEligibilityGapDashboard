@@ -144,11 +144,11 @@ FROM raw_totals, county_totals, people_totals, completion_totals;
 CREATE UNIQUE INDEX dashboard_overview_summary_mv_one_idx ON analytics.dashboard_overview_summary_mv ((true));
 
 CREATE MATERIALIZED VIEW analytics.dashboard_partner_summary_mv AS
-SELECT trim(source) AS partner,
+SELECT trim(partner) AS partner,
        count(*)::int AS records
 FROM analytics."20_million_by_2032"
-WHERE source IS NOT NULL AND trim(source) <> ''
-GROUP BY trim(source);
+WHERE partner IS NOT NULL AND trim(partner) <> ''
+GROUP BY trim(partner);
 
 CREATE UNIQUE INDEX dashboard_partner_summary_mv_partner_idx ON analytics.dashboard_partner_summary_mv (partner);
 

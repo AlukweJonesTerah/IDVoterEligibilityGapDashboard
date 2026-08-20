@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const params = filterValues(filters);
   const useSummary = isUnfiltered(filters);
   // Keep the comparison across all partners while applying the other global
-  // filters. This lets a selected partner remain visibly comparable.
+  // filters, including source. This lets a selected partner remain comparable.
   const comparisonFilters = { ...filters, partner: null };
   const comparisonParams = filterValues(comparisonFilters);
   const usePartnerSummary = isUnfiltered(comparisonFilters);
@@ -50,11 +50,11 @@ export async function GET(req: NextRequest) {
     usePartnerSummary
       ? db.query(`SELECT partner, records FROM analytics.dashboard_partner_summary_mv ORDER BY records DESC`)
       : db.query(
-        `SELECT trim(t.source) AS partner,
+        `SELECT trim(t.partner) AS partner,
               count(*)::int AS records
        FROM ${PROGRAMME_TABLE} t
-       WHERE ${nonBlankSql("t.source")} AND ${filterSql("t")}
-       GROUP BY trim(t.source)
+       WHERE ${nonBlankSql("t.partner")} AND ${filterSql("t")}
+       GROUP BY trim(t.partner)
        ORDER BY records DESC`,
         comparisonParams
       ),
@@ -208,7 +208,7 @@ export async function GET(req: NextRequest) {
       partnerComparison: {
         data: partnerComparison.rows,
         provenance: provenanceFor(registry, [PROGRAMME_DATASET_KEY], {
-          note: "Compares total records across every partner or programme stream. The selected partner is highlighted while the other global filters remain applied."
+          note: "Compares total records across training partners. The selected partner is highlighted while source and the other global filters remain applied."
         })
       },
       categories: {

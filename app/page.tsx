@@ -275,8 +275,8 @@ export default function ExecutiveOverview() {
           </section>
 
           <Widget
-            title="Records by partner and programme stream"
-            help="Total records for each delivery partner or programme stream. Click a bar to filter the dashboard."
+            title="Records by training partner"
+            help="Total records for each training partner. Use the Source filter to inspect programme streams within a partner."
             provenance={w.partnerComparison.provenance}
           >
             <EChart
@@ -334,7 +334,7 @@ export default function ExecutiveOverview() {
                 }
               }}
             />
-            <p className="mt-1 text-[11px] text-mute">Logarithmic scale keeps smaller partners visible. Click a bar to filter every page, then click it again to compare all.</p>
+            <p className="mt-1 text-[11px] text-mute">Logarithmic scale keeps smaller partners visible. Click a bar to filter every page, or use Source to inspect a programme stream.</p>
           </Widget>
 
           {/* Main visual area: map + demographic highlights */}

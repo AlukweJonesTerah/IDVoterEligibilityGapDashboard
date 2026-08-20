@@ -5,13 +5,24 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 export interface FilterState {
   county: string | null;
   category: string | null;
+  source: string | null;
   partner: string | null;
   preset: string; // 'all' | 'today' | '7d' | '30d' | 'month' | 'quarter' | 'year' | 'custom'
   from: string | null;
   to: string | null;
 }
 
-const EMPTY: FilterState = { county: null, category: null, partner: null, preset: "all", from: null, to: null };
+const EMPTY: FilterState = {
+  county: null,
+  category: null,
+  source: null,
+  partner: null,
+  preset: "all",
+  from: null,
+  to: null
+};
+const STORAGE_KEY = "icta-filters-v2";
+const LEGACY_STORAGE_KEY = "icta-filters";
 
 interface FilterContextValue {
   filters: FilterState;
@@ -54,8 +65,19 @@ export function FilterProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem("icta-filters");
-      if (saved) setState({ ...EMPTY, ...JSON.parse(saved) });
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setState({ ...EMPTY, ...JSON.parse(saved) });
+        return;
+      }
+
+      // Before partner became its own database field, the partner filter was
+      // backed by source. Preserve that selection under its correct meaning.
+      const legacy = sessionStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacy) {
+        const parsed = JSON.parse(legacy) as Partial<FilterState>;
+        setState({ ...EMPTY, ...parsed, source: parsed.partner ?? null, partner: null });
+      }
     } catch {
       /* ignore corrupt storage */
     }
@@ -66,6 +88,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams();
     if (filters.county) params.set("fcounty", filters.county);
     if (filters.category) params.set("fcategory", filters.category);
+    if (filters.source) params.set("fsource", filters.source);
     if (filters.partner) params.set("fpartner", filters.partner);
     if (dates.from) params.set("ffrom", dates.from);
     if (dates.to) params.set("fto", dates.to);
@@ -73,7 +96,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     const persist = (next: FilterState) => {
       setState(next);
       try {
-        sessionStorage.setItem("icta-filters", JSON.stringify(next));
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       } catch {
         /* storage unavailable */
       }

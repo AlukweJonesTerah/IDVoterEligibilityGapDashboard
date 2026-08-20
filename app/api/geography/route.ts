@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
            FROM ${PROGRAMME_TABLE} t
            WHERE ${filterSql("t")}
              AND regexp_replace(lower(coalesce(t.county, '')), '[^a-z0-9]+', '', 'g') =
-                 regexp_replace(lower(coalesce($6::text, '')), '[^a-z0-9]+', '', 'g')
+                 regexp_replace(lower(coalesce($7::text, '')), '[^a-z0-9]+', '', 'g')
            GROUP BY 1 ORDER BY learners DESC`,
           [...params, drillCounty]
         )

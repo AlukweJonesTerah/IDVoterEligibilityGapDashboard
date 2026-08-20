@@ -4,10 +4,11 @@ set -u
 BASE="${1:-http://127.0.0.1:3002}"
 fail=0
 for ep in overview geography "geography?county=Nakuru" demographics pipeline courses quality \
-  "overview?fpartner=Ajira%20Portal" "courses?fpartner=ICTA%20Standards" \
-  "geography?fpartner=ICTA%20Standards&county=Nairobi" \
-  "quality?fpartner=ICTA%20Standards" health; do
-  if curl -sf --max-time 30 "$BASE/api/$ep" > /dev/null; then
+  "overview?fpartner=ICTA" "overview?fsource=Ajira%20Portal" \
+  "courses?fsource=ICTA%20Standards&fpartner=ICTA" \
+  "geography?fsource=ICTA%20Standards&fpartner=ICTA&county=Nairobi" \
+  "quality?fpartner=ICTA" health; do
+  if curl -fsS --max-time 60 "$BASE/api/$ep" > /dev/null; then
     echo "ok      /api/$ep"
   else
     echo "FAILED  /api/$ep"

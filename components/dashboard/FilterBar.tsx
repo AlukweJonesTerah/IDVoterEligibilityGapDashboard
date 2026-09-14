@@ -3,30 +3,30 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { useFilters } from "./FilterContext";
-import { labelCase } from "@/lib/format";
-
-const PRESETS: { value: string; label: string }[] = [
-  { value: "all", label: "All time" },
-  { value: "today", label: "Today" },
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "month", label: "This month" },
-  { value: "quarter", label: "This quarter" },
-  { value: "year", label: "This year" },
-  { value: "custom", label: "Custom range" }
-];
+import type { Year } from "@/lib/years";
 
 const selectClass =
   "min-w-[120px] flex-1 rounded border border-hair bg-paperalt px-2 py-1.5 text-xs text-ink focus:border-icta-gray focus:outline-none xl:flex-none";
 
-function CountyCombobox({
-  counties,
+function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="eyebrow">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function SearchableSelect({
+  label,
+  options,
   value,
   onChange
 }: {
-  counties: string[];
+  label: string;
+  options: string[];
   value: string | null;
-  onChange: (county: string | null) => void;
+  onChange: (v: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -42,26 +42,26 @@ function CountyCombobox({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open]);
 
-  const filtered = counties.filter((c) => c.toLowerCase().includes(query.trim().toLowerCase()));
+  const filtered = options.filter((c) => c.toLowerCase().includes(query.trim().toLowerCase()));
 
-  const select = (county: string | null) => {
-    onChange(county);
+  const select = (v: string | null) => {
+    onChange(v);
     setQuery("");
     setOpen(false);
   };
 
   return (
-    <div ref={rootRef} className="relative min-w-[120px] flex-1 xl:flex-none">
+    <div ref={rootRef} className="relative min-w-[130px] flex-1 xl:flex-none">
       <button
         type="button"
-        aria-label="County"
+        aria-label={label}
         className={`${selectClass} flex w-full items-center justify-between gap-2 text-left`}
         onClick={() => {
           setOpen((o) => !o);
           requestAnimationFrame(() => inputRef.current?.focus());
         }}
       >
-        <span className="truncate">{value || "All counties"}</span>
+        <span className="truncate">{value || "All"}</span>
         <ChevronDown size={13} className="shrink-0 text-mute" />
       </button>
 
@@ -77,7 +77,7 @@ function CountyCombobox({
               onKeyDown={(e) => {
                 if (e.key === "Escape") setOpen(false);
               }}
-              placeholder="Search counties..."
+              placeholder={`Search ${label.toLowerCase()}...`}
               className="w-full bg-transparent text-xs text-ink outline-none"
             />
           </div>
@@ -85,9 +85,9 @@ function CountyCombobox({
             <button
               type="button"
               onClick={() => select(null)}
-              className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-icta-greenSoft ${!value ? "font-semibold text-icta-greenDeep" : "text-ink"}`}
+              className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-icta-blueSoft ${!value ? "font-semibold text-icta-blue" : "text-ink"}`}
             >
-              All counties
+              All
             </button>
             {filtered.length ? (
               filtered.map((c) => (
@@ -95,13 +95,13 @@ function CountyCombobox({
                   key={c}
                   type="button"
                   onClick={() => select(c)}
-                  className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-icta-greenSoft ${value === c ? "font-semibold text-icta-greenDeep" : "text-ink"}`}
+                  className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-icta-blueSoft ${value === c ? "font-semibold text-icta-blue" : "text-ink"}`}
                 >
                   {c}
                 </button>
               ))
             ) : (
-              <p className="px-3 py-1.5 text-xs text-mute">No counties match.</p>
+              <p className="px-3 py-1.5 text-xs text-mute">No matches.</p>
             )}
           </div>
         </div>
@@ -110,113 +110,131 @@ function CountyCombobox({
   );
 }
 
-export function FilterBar() {
+/** Horizontal scrollable quick-filter chip strip for Custom_Age_Band. */
+function AgeBandChips({ options, value, onChange }: { options: string[]; value: string | null; onChange: (v: string | null) => void }) {
+  const chip = (active: boolean) =>
+    `min-w-0 flex-1 basis-0 rounded px-2 py-1 text-center text-xs font-medium transition-colors ${
+      active ? "bg-icta-black text-white" : "border border-hair bg-paperalt text-subink hover:bg-paper"
+    }`;
+  return (
+    <div className="flex w-full min-w-0 items-center gap-1 overflow-x-auto pb-0.5">
+      <button type="button" onClick={() => onChange(null)} className={chip(!value)}>
+        All ages
+      </button>
+      {options.map((band) => (
+        <button key={band} type="button" onClick={() => onChange(band)} className={chip(value === band)}>
+          {band}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface Meta2019 {
+  counties: string[];
+  subCounties: string[];
+}
+interface Meta2009 {
+  provinces: string[];
+  districts: string[];
+}
+interface MetaShared {
+  ageBands: string[];
+}
+
+export function FilterBar({ year }: { year: Year }) {
   const { filters, setFilters, clear, active } = useFilters();
-  const [meta, setMeta] = useState<{
-    counties: string[];
-    categories: string[];
-    sources: string[];
-    partners: string[];
-  } | null>(null);
+  const [meta, setMeta] = useState<Meta2019 & Meta2009 & MetaShared>({
+    counties: [],
+    subCounties: [],
+    provinces: [],
+    districts: [],
+    ageBands: []
+  });
 
   useEffect(() => {
-    fetch("/api/meta")
+    const params = new URLSearchParams({ year });
+    if (year === "2019" && filters.county) params.set("county", filters.county);
+    if (year === "2009" && filters.province) params.set("province", filters.province);
+    fetch(`/api/meta?${params.toString()}`)
       .then((r) => r.json())
       .then(setMeta)
-      .catch(() => setMeta({ counties: [], categories: [], sources: [], partners: [] }));
-  }, []);
+      .catch(() => setMeta({ counties: [], subCounties: [], provinces: [], districts: [], ageBands: [] }));
+  }, [year, filters.county, filters.province]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 py-2.5 xl:py-0">
-      <CountyCombobox
-        counties={meta?.counties ?? []}
-        value={filters.county}
-        onChange={(county) => setFilters({ county })}
-      />
+    <div className="flex flex-col gap-2.5">
+      <FilterField label="Select age">
+        <AgeBandChips options={meta.ageBands} value={filters.ageBand} onChange={(ageBand) => setFilters({ ageBand })} />
+      </FilterField>
 
-      <select
-        aria-label="Training partner"
-        className={selectClass}
-        value={filters.partner ?? ""}
-        onChange={(e) => setFilters({ partner: e.target.value || null })}
-      >
-        <option value="">All training partners</option>
-        {meta?.partners.map((partner) => (
-          <option key={partner} value={partner}>
-            {partner}
-          </option>
-        ))}
-      </select>
+      <div className="flex flex-wrap items-end gap-2">
+        <FilterField label="Gender">
+          <div className="flex items-center gap-1 rounded border border-hair bg-paperalt p-0.5">
+            {(["both", "male", "female"] as const).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setFilters({ gender: g })}
+                className={`rounded px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                  filters.gender === g ? "bg-icta-black text-white" : "text-subink hover:bg-paper"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </FilterField>
 
-      <select
-        aria-label="Source or programme stream"
-        className={selectClass}
-        value={filters.source ?? ""}
-        onChange={(e) => setFilters({ source: e.target.value || null })}
-      >
-        <option value="">All sources / streams</option>
-        {meta?.sources.map((source) => (
-          <option key={source} value={source}>
-            {source}
-          </option>
-        ))}
-      </select>
+        {year === "2019" ? (
+          <>
+            <FilterField label="Select county">
+              <SearchableSelect
+                label="County"
+                options={meta.counties}
+                value={filters.county}
+                onChange={(county) => setFilters({ county, subCounty: null })}
+              />
+            </FilterField>
+            <FilterField label="Select sub county">
+              <SearchableSelect
+                label="Sub County"
+                options={meta.subCounties}
+                value={filters.subCounty}
+                onChange={(subCounty) => setFilters({ subCounty })}
+              />
+            </FilterField>
+          </>
+        ) : (
+          <>
+            <FilterField label="Select province">
+              <SearchableSelect
+                label="Province"
+                options={meta.provinces}
+                value={filters.province}
+                onChange={(province) => setFilters({ province, district: null })}
+              />
+            </FilterField>
+            <FilterField label="Select district">
+              <SearchableSelect
+                label="District"
+                options={meta.districts}
+                value={filters.district}
+                onChange={(district) => setFilters({ district })}
+              />
+            </FilterField>
+          </>
+        )}
 
-      <select
-        aria-label="Course category"
-        className={selectClass}
-        value={filters.category ?? ""}
-        onChange={(e) => setFilters({ category: e.target.value || null })}
-      >
-        <option value="">All categories</option>
-        {meta?.categories.map((c) => (
-          <option key={c} value={c}>
-            {labelCase(c)}
-          </option>
-        ))}
-      </select>
-
-      <select
-        aria-label="Date range"
-        className={selectClass}
-        value={filters.preset}
-        onChange={(e) => setFilters({ preset: e.target.value })}
-      >
-        {PRESETS.map((p) => (
-          <option key={p.value} value={p.value}>
-            {p.label}
-          </option>
-        ))}
-      </select>
-
-      {filters.preset === "custom" ? (
-        <>
-          <input
-            type="date"
-            aria-label="From date"
-            className={selectClass}
-            value={filters.from ?? ""}
-            onChange={(e) => setFilters({ from: e.target.value || null })}
-          />
-          <span className="text-xs text-mute">to</span>
-          <input
-            type="date"
-            aria-label="To date"
-            className={selectClass}
-            value={filters.to ?? ""}
-            onChange={(e) => setFilters({ to: e.target.value || null })}
-          />
-        </>
-      ) : null}
-
-      {active ? (
-        <button
-          onClick={clear}
-          className="rounded border border-hair bg-paper px-2 py-1.5 text-xs font-medium text-icta-greenDeep hover:bg-icta-greenSoft"
-        >
-          Clear filters
-        </button>
-      ) : null}
+        {active ? (
+          <button
+            onClick={clear}
+            className="rounded border border-hair bg-paper px-2 py-1.5 text-xs font-medium text-icta-blue hover:bg-icta-blueSoft"
+          >
+            Clear filters
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -22,7 +22,9 @@ const config: Config = {
           greenDeep: "#007A3D",
           greenSoft: "#E6F6EE",
           blue: "#1667A8",
-          blueSoft: "#E4F0F8"
+          blueSoft: "#E4F0F8",
+          amber: "#E8871E",
+          amberSoft: "#FCEEDD"
         },
         signal: {
           gold: "#9A6E20",

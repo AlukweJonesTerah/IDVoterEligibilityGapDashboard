@@ -7,13 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "db:check": "node --env-file-if-exists=.env scripts/refresh-dashboard.mjs --check",
-    "db:refresh": "node --env-file-if-exists=.env scripts/refresh-dashboard.mjs",
-    "db:views": "node --env-file-if-exists=.env scripts/refresh-dashboard.mjs --rebuild",
-    "db:auto:install": "./scripts/install-dashboard-refresh-cron.sh",
-    "db:auto:run": "./scripts/refresh-dashboard-if-dirty.sh",
-    "db:fixture": "node db/dev/seed-training-fixture.mjs",
-    "db:sample": "docker exec -i icta-dashboard-db psql -U icta_dashboard -d icta_dashboard -v ON_ERROR_STOP=1 -f - < db/sample/001_generate_sample_lane.sql"
+    "db:apply": "node --env-file-if-exists=.env scripts/db-apply.mjs",
+    "db:seed": "node --env-file-if-exists=.env scripts/seed-eligibility-data.mjs"
   },
   "dependencies": {
     "echarts": "^5.6.0",
@@ -31,11 +26,13 @@
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
     "autoprefixer": "^10.4.20",
+    "csv-parse": "^5.6.0",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.0",
     "playwright-core": "^1.60.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "topojson-client": "^3.1.0",
     "typescript": "^5.7.2"
   }
 }

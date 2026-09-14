@@ -1,6 +1,7 @@
 -- Kenya county reference list: official codes 1-47, former-province grouping,
--- and KNBS 2019 Census population (Volume I). Population anchors per-capita
--- metrics and population-weighted sample allocation; always real, never sampled.
+-- and KNBS 2019 Census population (Volume I).
+
+CREATE SCHEMA IF NOT EXISTS ref;
 
 -- Canonical county-name matching: source systems vary in casing, hyphens and
 -- apostrophes ("Tharaka Nithi" / "THARAKA-NITHI" / "Murang'a"). Join through

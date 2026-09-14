@@ -8,3 +8,13 @@ npm-debug.log*
 Dockerfile.*
 *.tsbuildinfo
 .next-dev
+.vscode/
+*.xlsx
+*.xls
+*.csv
+*.parquet
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+Thumbs.db

@@ -2,8 +2,6 @@
 
 import type { ReactNode } from "react";
 import { Info } from "lucide-react";
-import type { Provenance } from "@/lib/provenance";
-import { ProvenanceDot } from "./Provenance";
 
 /** Hover explainer for a widget; same popover treatment as the provenance dot. */
 export function HelpTip({ text }: { text?: string }) {
@@ -21,14 +19,12 @@ export function HelpTip({ text }: { text?: string }) {
 
 export function Widget({
   title,
-  provenance,
   children,
   className = "",
   right,
   help
 }: {
   title: string;
-  provenance?: Provenance;
   children: ReactNode;
   className?: string;
   right?: ReactNode;
@@ -40,7 +36,6 @@ export function Widget({
         <h2 className="section-title inline-flex items-center gap-2">
           {title}
           <HelpTip text={help} />
-          <ProvenanceDot provenance={provenance} />
         </h2>
         {right}
       </div>
@@ -53,14 +48,12 @@ export function Kpi({
   label,
   value,
   sub,
-  provenance,
   compact = false,
   help
 }: {
   label: string;
   value: string;
   sub?: string;
-  provenance?: Provenance;
   compact?: boolean;
   help?: string;
 }) {
@@ -69,7 +62,6 @@ export function Kpi({
       <div className="flex items-center gap-2">
         <span className="eyebrow">{label}</span>
         <HelpTip text={help} />
-        <ProvenanceDot provenance={provenance} />
       </div>
       <div className={`tnum font-semibold text-ink ${compact ? "mt-0.5 text-lg leading-6" : "mt-1.5 text-[22px] leading-7"}`}>
         {value}

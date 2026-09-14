@@ -20,6 +20,23 @@ export const rankedBarMotion = {
 // mid/dark/light so touching slices differ strongly in lightness.
 export const chartPalette = ["#00A651", "#00522A", "#66C695", "#007A3D", "#6D6E6F"];
 
+// This dashboard's own report-parity palette (matches the source Power BI
+// report's default blue/orange theme, not the ICTA brand ramp above -- the
+// two live side by side because this data comes from a colleague's separate
+// report, not the ICTA-branded training dashboard AGENTS.md's palette was
+// written for).
+export const reportBlue = "#1667A8";
+export const reportBlueLight = "#5B9BD5";
+export const reportOrange = "#E8871E";
+export const reportPurple = "#6D4FC4";
+// Confirmed by directly comparing the source report's 2019 vs. 2009
+// Overview pages side by side: the gender-split panel's second color
+// differs by year (2019: blue/orange, 2009: blue/purple), not a fixed pair.
+export const genderColors: Record<"2019" | "2009", string[]> = {
+  "2019": [reportBlue, reportOrange],
+  "2009": [reportBlue, reportPurple]
+};
+
 export const axisStyle = {
   axisLine: { lineStyle: { color: "#E1E5EB" } },
   axisLabel: { color: "#6B7787", fontSize: 11 },
@@ -114,6 +131,90 @@ export function rankedBarOption(
             }
           : {}),
         data: values
+      }
+    ]
+  };
+}
+
+/** Vertical bar over a sequential category axis (e.g. population by single-year age). */
+export function ageBarOption(ages: number[], values: number[], color: string, threshold?: number): Record<string, unknown> {
+  return {
+    ...chartMotion,
+    grid: barGrid,
+    tooltip: { trigger: "axis" },
+    xAxis: { type: "category", data: ages.map(String), ...axisStyle, axisLabel: { ...axisStyle.axisLabel, interval: 4 } },
+    yAxis: { type: "value", ...axisStyle },
+    series: [
+      {
+        type: "bar",
+        barGap: 0,
+        itemStyle: {
+          color: (p: { dataIndex: number }) =>
+            threshold != null && ages[p.dataIndex] >= threshold ? color : "#C9D0DA"
+        },
+        data: values
+      }
+    ]
+  };
+}
+
+/** Single-level treemap (e.g. population split by gender), sized by value. */
+export function treemapOption(rows: { name: string; value: number }[], colors: string[]): Record<string, unknown> {
+  return {
+    ...chartMotion,
+    color: colors,
+    tooltip: {
+      formatter: (p: { name: string; value: number }) => `${p.name}: ${new Intl.NumberFormat("en-US").format(p.value)}`
+    },
+    series: [
+      {
+        type: "treemap",
+        roam: false,
+        nodeClick: false,
+        breadcrumb: { show: false },
+        label: { show: true, color: "#FFFFFF", fontSize: 12, fontWeight: 600 },
+        upperLabel: { show: false },
+        itemStyle: { borderColor: "#FFFFFF", borderWidth: 2, gapWidth: 2 },
+        data: rows
+      }
+    ]
+  };
+}
+
+const compactNf = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 3 });
+
+/**
+ * Two/three-block treemap sized by value with large stat-card labels (name
+ * top-left, big value bottom-left) instead of a centered plain label --
+ * matches the source report's gender-split panel.
+ */
+export function statTreemapOption(rows: { name: string; value: number }[], colors: string[]): Record<string, unknown> {
+  return {
+    ...chartMotion,
+    color: colors,
+    tooltip: {
+      formatter: (p: { name: string; value: number }) => `${p.name}: ${new Intl.NumberFormat("en-US").format(p.value)}`
+    },
+    series: [
+      {
+        type: "treemap",
+        roam: false,
+        nodeClick: false,
+        breadcrumb: { show: false },
+        label: {
+          show: true,
+          position: ["50%", "50%"],
+          align: "center",
+          verticalAlign: "middle",
+          formatter: (p: { name: string; value: number }) => `{name|${p.name}}\n{value|${compactNf.format(p.value)}}`,
+          rich: {
+            name: { color: "#FFFFFF", fontSize: 12, fontWeight: 600, lineHeight: 18, align: "center" },
+            value: { color: "#FFFFFF", fontSize: 22, fontWeight: 700, lineHeight: 28, align: "center" }
+          }
+        },
+        upperLabel: { show: false },
+        itemStyle: { borderColor: "#FFFFFF", borderWidth: 2, gapWidth: 2 },
+        data: rows
       }
     ]
   };

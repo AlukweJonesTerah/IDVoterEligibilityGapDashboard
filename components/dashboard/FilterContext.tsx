@@ -3,26 +3,27 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export interface FilterState {
+  gender: "both" | "male" | "female";
   county: string | null;
-  category: string | null;
-  source: string | null;
-  partner: string | null;
-  preset: string; // 'all' | 'today' | '7d' | '30d' | 'month' | 'quarter' | 'year' | 'custom'
-  from: string | null;
-  to: string | null;
+  subCounty: string | null;
+  division: string | null;
+  location: string | null;
+  province: string | null;
+  district: string | null;
+  ageBand: string | null;
 }
 
 const EMPTY: FilterState = {
+  gender: "both",
   county: null,
-  category: null,
-  source: null,
-  partner: null,
-  preset: "all",
-  from: null,
-  to: null
+  subCounty: null,
+  division: null,
+  location: null,
+  province: null,
+  district: null,
+  ageBand: null
 };
-const STORAGE_KEY = "icta-filters-v2";
-const LEGACY_STORAGE_KEY = "icta-filters";
+const STORAGE_KEY = "eligibility-filters-v1";
 
 interface FilterContextValue {
   filters: FilterState;
@@ -34,64 +35,28 @@ interface FilterContextValue {
 
 const Ctx = createContext<FilterContextValue | null>(null);
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-
-export function presetRange(preset: string): { from: string | null; to: string | null } {
-  const now = new Date();
-  const today = iso(now);
-  const daysAgo = (n: number) => iso(new Date(now.getTime() - n * 86400_000));
-  switch (preset) {
-    case "today":
-      return { from: today, to: today };
-    case "7d":
-      return { from: daysAgo(6), to: today };
-    case "30d":
-      return { from: daysAgo(29), to: today };
-    case "month":
-      return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: today };
-    case "quarter": {
-      const q = Math.floor(now.getMonth() / 3) * 3;
-      return { from: iso(new Date(now.getFullYear(), q, 1)), to: today };
-    }
-    case "year":
-      return { from: iso(new Date(now.getFullYear(), 0, 1)), to: today };
-    default:
-      return { from: null, to: null };
-  }
-}
-
 export function FilterProvider({ children }: { children: ReactNode }) {
   const [filters, setState] = useState<FilterState>(EMPTY);
 
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setState({ ...EMPTY, ...JSON.parse(saved) });
-        return;
-      }
-
-      // Before partner became its own database field, the partner filter was
-      // backed by source. Preserve that selection under its correct meaning.
-      const legacy = sessionStorage.getItem(LEGACY_STORAGE_KEY);
-      if (legacy) {
-        const parsed = JSON.parse(legacy) as Partial<FilterState>;
-        setState({ ...EMPTY, ...parsed, source: parsed.partner ?? null, partner: null });
-      }
+      if (saved) setState({ ...EMPTY, ...JSON.parse(saved) });
     } catch {
       /* ignore corrupt storage */
     }
   }, []);
 
   const value = useMemo<FilterContextValue>(() => {
-    const dates = filters.preset === "custom" ? { from: filters.from, to: filters.to } : presetRange(filters.preset);
     const params = new URLSearchParams();
+    if (filters.gender !== "both") params.set("fgender", filters.gender);
     if (filters.county) params.set("fcounty", filters.county);
-    if (filters.category) params.set("fcategory", filters.category);
-    if (filters.source) params.set("fsource", filters.source);
-    if (filters.partner) params.set("fpartner", filters.partner);
-    if (dates.from) params.set("ffrom", dates.from);
-    if (dates.to) params.set("fto", dates.to);
+    if (filters.subCounty) params.set("fsubcounty", filters.subCounty);
+    if (filters.division) params.set("fdivision", filters.division);
+    if (filters.location) params.set("flocation", filters.location);
+    if (filters.province) params.set("fprovince", filters.province);
+    if (filters.district) params.set("fdistrict", filters.district);
+    if (filters.ageBand) params.set("fageband", filters.ageBand);
     const queryString = params.toString();
     const persist = (next: FilterState) => {
       setState(next);

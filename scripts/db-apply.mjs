@@ -1,13 +1,11 @@
 // Idempotent schema apply for EXISTING databases.
 //
 // docker-entrypoint-initdb.d only runs on a fresh Postgres volume, so any
-// database created before db/init changed never picks them up. This script
-// applies the same files safely (they are IF NOT EXISTS / ON CONFLICT) and
-// fixes the dataset registry afterwards:
-//   - training_records is marked 'actual' when analytics.icta_training_data
-//     has rows, so real headline data never shows as modeled.
+// database created before db/init changed never picks up new files. This
+// script applies the same files safely (they are all IF NOT EXISTS/CREATE
+// OR REPLACE) against an already-initialized database.
 //
-// Usage: DATABASE_URL=postgres://... node scripts/db-apply.mjs [--with-sample]
+// Usage: DATABASE_URL=postgres://... node scripts/db-apply.mjs
 
 import { readFileSync } from "fs";
 import pg from "pg";
@@ -17,7 +15,6 @@ if (!url) {
   console.error("DATABASE_URL is required");
   process.exit(1);
 }
-const withSample = process.argv.includes("--with-sample");
 
 const client = new pg.Client({ connectionString: url });
 await client.connect();
@@ -26,13 +23,15 @@ console.log(`Applying to database "${dbInfo.rows[0].db}" as "${dbInfo.rows[0].us
 
 const files = [
   "db/init/001_init.sql",
-  "db/init/002_ref_sample_registry.sql",
   "db/init/003_ref_counties.sql",
-  "db/init/004_registry_coverage.sql",
-  ...(withSample ? ["db/sample/001_generate_sample_lane.sql"] : [])
+  "db/init/006_ref_county_lookup.sql",
+  "db/init/010_raw_census_population.sql",
+  "db/init/011_raw_id_eligibility.sql",
+  "db/init/012_raw_admin_dimensions.sql",
+  "db/init/020_ref_geo_views.sql",
+  "db/init/030_staging_reconciliation.sql",
+  "db/init/040_analytics_eligibility_views.sql"
 ];
-// For the live reporting layer (staging.* tables fed from the live source DB
-// with PII stripped at source), run scripts/live-refresh.sh instead.
 
 for (const f of files) {
   process.stdout.write(`  ${f} ... `);
@@ -40,29 +39,5 @@ for (const f of files) {
   console.log("ok");
 }
 
-const tableExists = (await client.query(
-  "SELECT to_regclass('analytics.icta_training_data') IS NOT NULL AS ok"
-)).rows[0].ok;
-if (tableExists) {
-  const fix = await client.query(`
-    UPDATE app.dataset_registry
-       SET active_source = 'actual',
-           loaded_at = coalesce(loaded_at, now()),
-           row_count = (SELECT count(*) FROM analytics.icta_training_data)
-     WHERE dataset_key = 'training_records'
-       AND EXISTS (SELECT 1 FROM analytics.icta_training_data LIMIT 1)
-     RETURNING row_count`);
-  console.log(
-    fix.rowCount
-      ? `  training_records marked actual (${fix.rows[0].row_count} rows)`
-      : "  training_records left as-is (table is empty)"
-  );
-} else {
-  console.log("  training_records left as-is (analytics.icta_training_data missing)");
-}
-
-const reg = await client.query(
-  "SELECT dataset_key, active_source FROM app.dataset_registry ORDER BY dataset_key"
-);
-console.table(reg.rows);
+console.log("Schema applied. Run `npm run db:seed` to (re)load the eligibility dataset.");
 await client.end();

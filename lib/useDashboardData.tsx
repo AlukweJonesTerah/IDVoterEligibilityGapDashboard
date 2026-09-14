@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Provenance } from "@/lib/provenance";
 import { useFilters } from "@/components/dashboard/FilterContext";
 
 export interface Widgets {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [name: string]: { data: any; provenance: Provenance };
+  [name: string]: { data: any; [extra: string]: any };
 }
 
 const clientCache = new Map<string, Widgets>();

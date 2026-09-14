@@ -3,8 +3,8 @@ import "./globals.css";
 import { FilterProvider } from "@/components/dashboard/FilterContext";
 
 export const metadata: Metadata = {
-  title: "ICTA Dashboard",
-  description: "ICT Authority executive dashboard for the Digital & AI Skills Training Program."
+  title: "ID & Voter Eligibility Gap Dashboard",
+  description: "Kenya 2009 & 2019 census: projected adult population vs. national ID and voter registration."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

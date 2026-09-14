@@ -9,10 +9,15 @@ export interface Widgets {
 }
 
 const clientCache = new Map<string, Widgets>();
-const configuredRefreshMs = Number(process.env.NEXT_PUBLIC_DASHBOARD_REFRESH_MS ?? 10 * 60_000);
+// Short by default: the data behind these endpoints can now change from
+// outside the app (batch reseed, or any other writer against the same DB),
+// so this polls often enough to feel live. The API's own short-TTL cache
+// (lib/api-cache.ts) plus the browser HTTP cache absorb the extra polling
+// cheaply -- most ticks resolve locally without a real round-trip.
+const configuredRefreshMs = Number(process.env.NEXT_PUBLIC_DASHBOARD_REFRESH_MS ?? 20_000);
 const browserRefreshMs = Number.isFinite(configuredRefreshMs) && configuredRefreshMs > 0
   ? configuredRefreshMs
-  : 10 * 60_000;
+  : 20_000;
 
 export function useDashboardData(endpoint: string) {
   const { queryString } = useFilters();
@@ -34,7 +39,7 @@ export function useDashboardData(endpoint: string) {
     const load = () => {
       if (requestInFlight) return;
       requestInFlight = true;
-      fetch(url, { cache: "no-store" })
+      fetch(url)
         .then((r) => {
           if (!r.ok) throw new Error(`${url} responded ${r.status}`);
           return r.json();

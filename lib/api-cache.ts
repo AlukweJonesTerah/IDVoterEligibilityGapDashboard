@@ -9,12 +9,13 @@ const globalForCache = globalThis as unknown as { ictaApiCache?: Map<string, Cac
 const cache = globalForCache.ictaApiCache ?? new Map<string, CacheEntry>();
 globalForCache.ictaApiCache = cache;
 
-const DEFAULT_TTL_MS = Number(process.env.ICTA_API_CACHE_TTL_MS ?? 10 * 60_000);
+// Short by design: the underlying data can now change from outside the app
+// (a re-run of scripts/seed-eligibility-data.mjs for a batch data drop, or
+// any other writer against the same Postgres/Neon database) and viewers
+// should see that within seconds, not the old 10-minute static-dataset
+// window. Still real caching -- it just favors freshness over TTL length.
+const DEFAULT_TTL_MS = Number(process.env.ICTA_API_CACHE_TTL_MS ?? 15_000);
 
-// This dataset (Kenya census/ID-eligibility data) is loaded once and never
-// mutated at runtime, unlike the old training dashboard's live, growing
-// source table -- so there's no need for the refresh-trigger cache
-// invalidation that used to live here. Just a plain TTL cache.
 export async function cachedJson<T>(
   req: NextRequest,
   namespace: string,
@@ -23,12 +24,13 @@ export async function cachedJson<T>(
 ) {
   const key = `${namespace}:${req.nextUrl.searchParams.toString()}`;
   const now = Date.now();
+  const cacheControl = `private, max-age=${Math.max(1, Math.floor(ttlMs / 1000))}`;
   const hit = cache.get(key);
   if (hit && hit.expiresAt > now) {
-    return NextResponse.json(hit.data, { headers: { "Cache-Control": "no-store", "X-ICTA-Cache": "HIT" } });
+    return NextResponse.json(hit.data, { headers: { "Cache-Control": cacheControl, "X-ICTA-Cache": "HIT" } });
   }
 
   const data = await load();
   cache.set(key, { data, expiresAt: now + ttlMs });
-  return NextResponse.json(data, { headers: { "Cache-Control": "no-store", "X-ICTA-Cache": "MISS" } });
+  return NextResponse.json(data, { headers: { "Cache-Control": cacheControl, "X-ICTA-Cache": "MISS" } });
 }

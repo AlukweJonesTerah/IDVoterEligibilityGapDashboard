@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     const hasScope = countyCodes.length > 0;
 
     if (year === "2019") {
-      const [adultPop, registeredIds] = await Promise.all([
+      const [adultPop, registeredIds, registeredIdsTotal] = await Promise.all([
         db.query<{ county: string; sub_county: string; v: string }>(
           `SELECT county, sub_county, sum(population)::text AS v
            FROM analytics.census2019_pop
@@ -66,6 +66,13 @@ export async function GET(req: NextRequest) {
            ORDER BY county, sub_county`,
           [hasScope, countyCodes, threshold]
         ),
+        // There are ~5,300 distinct locations nationally -- more than fit
+        // in one page, so this returns only the top 2000 by ID-holder
+        // count. The grand total below is a SEPARATE, unlimited aggregate:
+        // summing just these displayed rows would silently undercount the
+        // "Registered National IDs" headline figure by omitting the long
+        // tail of smaller locations (confirmed: doing so undercounts by
+        // ~5.8M, about 17%, against the true national total).
         db.query<{ county: string; subcounty: string; division: string; location: string; v: string }>(
           `SELECT county, subcounty, division, location, sum(total)::text AS v
            FROM analytics.id_holders
@@ -73,6 +80,11 @@ export async function GET(req: NextRequest) {
            GROUP BY county, subcounty, division, location
            ORDER BY sum(total) DESC
            LIMIT 2000`,
+          [hasScope, countyCodes]
+        ),
+        db.query<{ v: string }>(
+          `SELECT sum(total)::text AS v FROM analytics.id_holders
+           WHERE $1::boolean = false OR county_code = ANY($2::int[])`,
           [hasScope, countyCodes]
         )
       ]);
@@ -91,7 +103,8 @@ export async function GET(req: NextRequest) {
               subcounty: r.subcounty,
               division: r.division,
               idHolders: Number(r.v)
-            }))
+            })),
+            total: Number(registeredIdsTotal.rows[0]?.v ?? 0)
           }
         }
       };
@@ -129,7 +142,8 @@ export async function GET(req: NextRequest) {
             name: r.county,
             province: r.province,
             idHolders: Number(r.v)
-          }))
+          })),
+          total: registeredIds.rows.reduce((s, r) => s + Number(r.v), 0)
         }
       }
     };

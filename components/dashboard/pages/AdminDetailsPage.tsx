@@ -183,7 +183,10 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
   if (!widgets) return <LoadingBlock error={error} />;
 
   const adultTotal = (widgets.adultPopulationPivot.data as { population: number }[]).reduce((s, r) => s + r.population, 0);
-  const idHoldersTotal = (widgets.registeredIdsTable.data as { idHolders: number }[]).reduce((s, r) => s + r.idHolders, 0);
+  // Server-computed, unlimited aggregate -- NOT a client-side sum of the
+  // displayed rows, which are capped (2019: top 2000 of ~5,300 locations)
+  // and would silently undercount this headline figure.
+  const idHoldersTotal = widgets.registeredIdsTable.total as number;
   const gapTotal = Math.max(adultTotal - idHoldersTotal, 0);
 
   const crumb =

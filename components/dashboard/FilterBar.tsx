@@ -112,12 +112,17 @@ function SearchableSelect({
 
 /** Horizontal scrollable quick-filter chip strip for Custom_Age_Band. */
 function AgeBandChips({ options, value, onChange }: { options: string[]; value: string | null; onChange: (v: string | null) => void }) {
+  // Natural width + shrink-0, not flex-1/basis-0: equal-width flex children
+  // shrink to fit the row instead of ever triggering overflow-x-auto below,
+  // which on a narrow phone squeezed labels like "11-20" or "All ages" down
+  // to ~30px and wrapped them across two jagged lines. Fixed-content-width
+  // chips let the row actually scroll horizontally on mobile instead.
   const chip = (active: boolean) =>
-    `min-w-0 flex-1 basis-0 rounded px-2 py-1 text-center text-xs font-medium transition-colors ${
+    `shrink-0 whitespace-nowrap rounded px-2.5 py-1 text-center text-xs font-medium transition-colors ${
       active ? "bg-icta-black text-white" : "border border-hair bg-paperalt text-subink hover:bg-paper"
     }`;
   return (
-    <div className="flex w-full min-w-0 items-center gap-1 overflow-x-auto pb-0.5">
+    <div className="flex w-full items-center gap-1 overflow-x-auto pb-0.5">
       <button type="button" onClick={() => onChange(null)} className={chip(!value)}>
         All ages
       </button>

@@ -30,6 +30,11 @@ const config: Config = {
           gold: "#9A6E20",
           clay: "#B85450",
           slate: "#5E6B7A"
+        },
+        // Sampled directly from the Pathways Technologies logo mark.
+        pathways: {
+          orange: "#F89634",
+          orangeDeep: "#C96F1A"
         }
       },
       fontFamily: {

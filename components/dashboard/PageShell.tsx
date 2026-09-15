@@ -42,12 +42,18 @@ export function PageShell({
                 Sources: KNBS 2009 &amp; 2019 Census, national ID registry, IEBC registered-voter roll.
               </p>
               <div className="flex items-center gap-2 text-xs font-medium text-mute sm:justify-end">
-                <span>Portal built by</span>
+                <span>
+                  Portal built by <span className="font-semibold text-pathways-orangeDeep">Pathways</span>
+                </span>
                 <a
                   href="https://pathwaystechnologies.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center rounded bg-icta-black px-2 py-1 transition-opacity hover:opacity-85"
+                  // Dark pill keeps the logo's white wordmark legible (white on
+                  // the brand orange directly reads as washed out, ~1.8:1
+                  // contrast); the orange carries the brand instead as a
+                  // border that brightens on hover.
+                  className="inline-flex items-center rounded border border-pathways-orange bg-icta-black px-2 py-1 transition-colors hover:border-pathways-orangeDeep hover:bg-ink"
                 >
                   <Image
                     src="/Pathways-Technologies-Logo-White-Header.png"

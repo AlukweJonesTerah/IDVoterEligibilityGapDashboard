@@ -165,9 +165,11 @@ const LOCATION_GAP_ROW_LIMIT = 2000;
 export async function locationIdGapEstimate2019(
   threshold: number,
   hasScope: boolean,
-  countyCodes: number[]
+  countyCodes: number[],
+  division: string | null = null,
+  location: string | null = null
 ): Promise<LocationGapResult> {
-  const params = [threshold, hasScope, countyCodes];
+  const params = [threshold, hasScope, countyCodes, division, location];
   const estimateCte = `
     WITH subcounty_rate AS (
       SELECT county_code, sub_county,
@@ -197,7 +199,9 @@ export async function locationIdGapEstimate2019(
       LEFT JOIN subcounty_rate sr
         ON sr.county_code = e.county_code AND upper(btrim(sr.sub_county)) = upper(btrim(e.subcounty))
       LEFT JOIN county_rate cr ON cr.county_code = e.county_code
-      WHERE $2::boolean = false OR e.county_code = ANY($3::int[])
+      WHERE ($2::boolean = false OR e.county_code = ANY($3::int[]))
+        AND ($4::text IS NULL OR e.division = $4::text)
+        AND ($5::text IS NULL OR e.location_name = $5::text)
     )`;
 
   const [rowsResult, totalResult] = await Promise.all([
@@ -241,9 +245,11 @@ export async function locationIdGapEstimate2019(
 export async function locationIdGapEstimate2009(
   threshold: number,
   hasScope: boolean,
-  countyCodes: number[]
+  countyCodes: number[],
+  division: string | null = null,
+  location: string | null = null
 ): Promise<LocationGapResult> {
-  const params = [threshold, hasScope, countyCodes];
+  const params = [threshold, hasScope, countyCodes, division, location];
   const estimateCte = `
     WITH county_rate AS (
       SELECT county_code,
@@ -260,7 +266,9 @@ export async function locationIdGapEstimate2009(
         'county'::text AS ratio_source
       FROM analytics.id_eligibility e
       LEFT JOIN county_rate cr ON cr.county_code = e.county_code
-      WHERE $2::boolean = false OR e.county_code = ANY($3::int[])
+      WHERE ($2::boolean = false OR e.county_code = ANY($3::int[]))
+        AND ($4::text IS NULL OR e.division = $4::text)
+        AND ($5::text IS NULL OR e.location_name = $5::text)
     )`;
 
   const [rowsResult, totalResult] = await Promise.all([

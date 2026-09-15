@@ -87,18 +87,22 @@ export async function GET(req: NextRequest) {
         db.query<{ county: string; subcounty: string; division: string; location: string; v: string }>(
           `SELECT county, subcounty, division, location, sum(total)::text AS v
            FROM analytics.id_holders
-           WHERE $1::boolean = false OR county_code = ANY($2::int[])
+           WHERE ($1::boolean = false OR county_code = ANY($2::int[]))
+             AND ($3::text IS NULL OR division = $3::text)
+             AND ($4::text IS NULL OR location = $4::text)
            GROUP BY county, subcounty, division, location
            ORDER BY sum(total) DESC
            LIMIT 2000`,
-          [hasScope, countyCodes]
+          [hasScope, countyCodes, filters.division, filters.location]
         ),
         db.query<{ v: string }>(
           `SELECT sum(total)::text AS v FROM analytics.id_holders
-           WHERE $1::boolean = false OR county_code = ANY($2::int[])`,
-          [hasScope, countyCodes]
+           WHERE ($1::boolean = false OR county_code = ANY($2::int[]))
+             AND ($3::text IS NULL OR division = $3::text)
+             AND ($4::text IS NULL OR location = $4::text)`,
+          [hasScope, countyCodes, filters.division, filters.location]
         ),
-        locationIdGapEstimate2019(threshold, hasScope, countyCodes)
+        locationIdGapEstimate2019(threshold, hasScope, countyCodes, filters.division, filters.location)
       ]);
 
       return {
@@ -142,12 +146,14 @@ export async function GET(req: NextRequest) {
         `SELECT c.former_province AS province, c.county_name AS county, sum(h.total)::text AS v
          FROM analytics.id_holders h
          JOIN ref.counties c ON c.county_code = h.county_code
-         WHERE $1::boolean = false OR h.county_code = ANY($2::int[])
+         WHERE ($1::boolean = false OR h.county_code = ANY($2::int[]))
+           AND ($3::text IS NULL OR h.division = $3::text)
+           AND ($4::text IS NULL OR h.location = $4::text)
          GROUP BY c.former_province, c.county_name
          ORDER BY sum(h.total) DESC`,
-        [hasScope, countyCodes]
+        [hasScope, countyCodes, filters.division, filters.location]
       ),
-      locationIdGapEstimate2009(threshold, hasScope, countyCodes)
+      locationIdGapEstimate2009(threshold, hasScope, countyCodes, filters.division, filters.location)
     ]);
 
     return {

@@ -227,11 +227,12 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
         </div>
       </div>
 
-      <FilterBar year={year} />
+      <FilterBar year={year} showAdminFilters />
 
       <p className="text-[11px] text-mute">
-        Registered-ID detail below is a current, county-level snapshot with no per-threshold or gender split --
-        only the {year === "2009" ? "province/district" : "county"} filter above narrows it.
+        Registered-ID detail below is a current snapshot with no per-threshold or gender split -- the{" "}
+        {year === "2009" ? "province/district" : "county"}, division, and location filters above narrow it (division
+        and location use the ID registry&apos;s own admin-unit names, not the census sub-county list).
       </p>
 
       {year === "2019" ? (

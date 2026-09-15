@@ -143,29 +143,45 @@ interface Meta2009 {
   provinces: string[];
   districts: string[];
 }
+interface MetaAdmin {
+  divisions: string[];
+  locations: string[];
+}
 interface MetaShared {
   ageBands: string[];
 }
 
-export function FilterBar({ year }: { year: Year }) {
+const EMPTY_META: Meta2019 & Meta2009 & MetaAdmin & MetaShared = {
+  counties: [],
+  subCounties: [],
+  provinces: [],
+  districts: [],
+  divisions: [],
+  locations: [],
+  ageBands: []
+};
+
+/**
+ * Division/location narrow the ID-registry tables on the Admin Details
+ * pages (analytics.id_eligibility) -- a different, current-day admin-unit
+ * taxonomy from the census county/sub-county filters above, which is why
+ * they only show up there (`showAdminFilters`) rather than on every page.
+ */
+export function FilterBar({ year, showAdminFilters = false }: { year: Year; showAdminFilters?: boolean }) {
   const { filters, setFilters, clear, active } = useFilters();
-  const [meta, setMeta] = useState<Meta2019 & Meta2009 & MetaShared>({
-    counties: [],
-    subCounties: [],
-    provinces: [],
-    districts: [],
-    ageBands: []
-  });
+  const [meta, setMeta] = useState(EMPTY_META);
 
   useEffect(() => {
     const params = new URLSearchParams({ year });
     if (year === "2019" && filters.county) params.set("county", filters.county);
     if (year === "2009" && filters.province) params.set("province", filters.province);
+    if (year === "2009" && filters.district) params.set("district", filters.district);
+    if (filters.division) params.set("division", filters.division);
     fetch(`/api/meta?${params.toString()}`)
       .then((r) => r.json())
       .then(setMeta)
-      .catch(() => setMeta({ counties: [], subCounties: [], provinces: [], districts: [], ageBands: [] }));
-  }, [year, filters.county, filters.province]);
+      .catch(() => setMeta(EMPTY_META));
+  }, [year, filters.county, filters.province, filters.district, filters.division]);
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -198,7 +214,7 @@ export function FilterBar({ year }: { year: Year }) {
                 label="County"
                 options={meta.counties}
                 value={filters.county}
-                onChange={(county) => setFilters({ county, subCounty: null })}
+                onChange={(county) => setFilters({ county, subCounty: null, division: null, location: null })}
               />
             </FilterField>
             <FilterField label="Select sub county">
@@ -217,7 +233,7 @@ export function FilterBar({ year }: { year: Year }) {
                 label="Province"
                 options={meta.provinces}
                 value={filters.province}
-                onChange={(province) => setFilters({ province, district: null })}
+                onChange={(province) => setFilters({ province, district: null, division: null, location: null })}
               />
             </FilterField>
             <FilterField label="Select district">
@@ -225,11 +241,32 @@ export function FilterBar({ year }: { year: Year }) {
                 label="District"
                 options={meta.districts}
                 value={filters.district}
-                onChange={(district) => setFilters({ district })}
+                onChange={(district) => setFilters({ district, division: null, location: null })}
               />
             </FilterField>
           </>
         )}
+
+        {showAdminFilters ? (
+          <>
+            <FilterField label="Select division">
+              <SearchableSelect
+                label="Division"
+                options={meta.divisions}
+                value={filters.division}
+                onChange={(division) => setFilters({ division, location: null })}
+              />
+            </FilterField>
+            <FilterField label="Select location">
+              <SearchableSelect
+                label="Location"
+                options={meta.locations}
+                value={filters.location}
+                onChange={(location) => setFilters({ location })}
+              />
+            </FilterField>
+          </>
+        ) : null}
 
         <button
           onClick={clear}

@@ -7,6 +7,7 @@ import { FilterBar } from "@/components/dashboard/FilterBar";
 import { useFilters } from "@/components/dashboard/FilterContext";
 import { Widget } from "@/components/dashboard/Widget";
 import { PivotTable } from "@/components/dashboard/PivotTable";
+import { AdminDrillTree } from "@/components/dashboard/AdminDrillTree";
 import { fmt } from "@/lib/format";
 import type { Year } from "@/lib/years";
 
@@ -281,6 +282,13 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
             ]}
           />
         )}
+      </Widget>
+
+      <Widget
+        title={`Adult Population (${threshold}+) drill-through`}
+        help="Click a node to expand it. Each level is a real aggregate of its own children, estimated from population apportioned by the local adult-share rate -- see the note below the tree."
+      >
+        <AdminDrillTree year={year} threshold={threshold} />
       </Widget>
 
       {(() => {

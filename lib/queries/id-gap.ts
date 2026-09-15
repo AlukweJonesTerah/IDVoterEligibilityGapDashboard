@@ -302,3 +302,101 @@ export async function locationIdGapEstimate2009(
 
   return toLocationGapResult(rowsResult.rows, totalResult.rows[0]);
 }
+
+export interface DrillRow {
+  name: string;
+  value: number;
+}
+
+export type AdminDrillLevel = "county" | "subcounty" | "division" | "location";
+export const ADMIN_DRILL_LEVELS: AdminDrillLevel[] = ["county", "subcounty", "division", "location"];
+
+const ADMIN_DRILL_COLUMN: Record<AdminDrillLevel, string> = {
+  county: "county_name",
+  subcounty: "subcounty",
+  division: "division",
+  location: "location_name"
+};
+
+/**
+ * One column of the Admin Details "Adult Population" decomposition tree:
+ * estimated adults (see locationIdGapEstimate2019/2009 above) grouped by
+ * `level`, scoped to whichever ancestor levels the caller has already
+ * drilled into. Unlike the source report's own decomposition tree, each
+ * node here is a real aggregate of its own children -- not the parent
+ * total repeated unchanged at every depth (confirmed against the live
+ * report: every node under Nairobi showed the same 746,337 county figure
+ * regardless of drill depth, which reads as a bug in that visual's measure
+ * context, not real per-location data).
+ */
+export async function adminDrillLevel(
+  year: "2019" | "2009",
+  threshold: number,
+  level: AdminDrillLevel,
+  ancestors: { county?: string; subcounty?: string; division?: string }
+): Promise<DrillRow[]> {
+  const whereParts: string[] = [];
+  const params: (string | number)[] = [threshold];
+  const addAncestor = (col: string, value: string | undefined) => {
+    if (!value) return;
+    params.push(value);
+    whereParts.push(`e.${col} = $${params.length}`);
+  };
+  addAncestor("county_name", ancestors.county);
+  addAncestor("subcounty", ancestors.subcounty);
+  addAncestor("division", ancestors.division);
+  const extraWhere = whereParts.length ? `AND ${whereParts.join(" AND ")}` : "";
+  const groupCol = ADMIN_DRILL_COLUMN[level];
+
+  const rateCte =
+    year === "2019"
+      ? `subcounty_rate AS (
+           SELECT county_code, sub_county,
+             sum(population) FILTER (WHERE age >= $1) AS adults,
+             sum(population) AS total
+           FROM analytics.census2019_pop
+           GROUP BY county_code, sub_county
+         ),
+         county_rate AS (
+           SELECT county_code,
+             sum(population) FILTER (WHERE age >= $1) AS adults,
+             sum(population) AS total
+           FROM analytics.census2019_pop
+           GROUP BY county_code
+         ),`
+      : `county_rate AS (
+           SELECT county_code,
+             sum(population) FILTER (WHERE age >= $1) AS adults,
+             sum(population) AS total
+           FROM analytics.census2009_pop_county
+           GROUP BY county_code
+         ),`;
+  const rateJoin =
+    year === "2019"
+      ? `LEFT JOIN subcounty_rate sr
+           ON sr.county_code = e.county_code AND upper(btrim(sr.sub_county)) = upper(btrim(e.subcounty))
+         LEFT JOIN county_rate cr ON cr.county_code = e.county_code`
+      : `LEFT JOIN county_rate cr ON cr.county_code = e.county_code`;
+  const rateExpr =
+    year === "2019"
+      ? `COALESCE(NULLIF(sr.adults, 0)::numeric / NULLIF(sr.total, 0), NULLIF(cr.adults, 0)::numeric / NULLIF(cr.total, 0), 0)`
+      : `COALESCE(NULLIF(cr.adults, 0)::numeric / NULLIF(cr.total, 0), 0)`;
+
+  const { rows } = await db.query<{ name: string; v: string }>(
+    `WITH ${rateCte}
+     est AS (
+       SELECT e.county_name, e.subcounty, e.division, e.location_name,
+         round(e.population * ${rateExpr}) AS estimated_adults
+       FROM analytics.id_eligibility e
+       ${rateJoin}
+       WHERE true ${extraWhere}
+     )
+     SELECT ${groupCol} AS name, sum(estimated_adults)::text AS v
+     FROM est
+     WHERE ${groupCol} IS NOT NULL
+     GROUP BY 1
+     ORDER BY 2 DESC`,
+    params
+  );
+  return rows.map((r) => ({ name: r.name, value: Number(r.v) }));
+}

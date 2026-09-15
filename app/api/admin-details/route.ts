@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { db } from "@/lib/db";
 import { readFilters } from "@/lib/filters-server";
+import { locationIdGapEstimate2009, locationIdGapEstimate2019 } from "@/lib/queries/id-gap";
 import { THRESHOLDS } from "@/lib/years";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,16 @@ export const dynamic = "force-dynamic";
 // analytics.id_holders has no per-threshold/gender split and no
 // district link, so it's always the same national snapshot regardless of
 // year/threshold/gender -- only the admin-unit filter narrows it (`countyOnly`).
+//
+// `locationGapTable` goes beyond the source report: it estimates an
+// adult-ID gap down to LOCATION level (see lib/queries/id-gap.ts), which the
+// report itself cannot do -- its own Administrative Details pages stop at
+// exact ID-holder counts per location with no adult-population comparison
+// ("to drill this further we need age at the ward level"). This is an
+// apportioned ESTIMATE, not a census figure, and uses analytics.id_eligibility
+// (not analytics.id_holders, a different, sparser extraction of the same ID
+// registry -- see its own doc comment) so its population/id-holder pair are
+// always self-consistent. It must never feed registeredIdsTable's totals.
 export async function GET(req: NextRequest) {
   return cachedJson(req, "admin-details", async () => {
     const year = req.nextUrl.searchParams.get("year") === "2009" ? "2009" : "2019";
@@ -57,7 +68,7 @@ export async function GET(req: NextRequest) {
     const hasScope = countyCodes.length > 0;
 
     if (year === "2019") {
-      const [adultPop, registeredIds, registeredIdsTotal] = await Promise.all([
+      const [adultPop, registeredIds, registeredIdsTotal, locationGap] = await Promise.all([
         db.query<{ county: string; sub_county: string; v: string }>(
           `SELECT county, sub_county, sum(population)::text AS v
            FROM analytics.census2019_pop
@@ -86,7 +97,8 @@ export async function GET(req: NextRequest) {
           `SELECT sum(total)::text AS v FROM analytics.id_holders
            WHERE $1::boolean = false OR county_code = ANY($2::int[])`,
           [hasScope, countyCodes]
-        )
+        ),
+        locationIdGapEstimate2019(threshold, hasScope, countyCodes)
       ]);
 
       return {
@@ -105,12 +117,19 @@ export async function GET(req: NextRequest) {
               idHolders: Number(r.v)
             })),
             total: Number(registeredIdsTotal.rows[0]?.v ?? 0)
+          },
+          locationGapTable: {
+            data: locationGap.rows,
+            totalPopulation: locationGap.totalPopulation,
+            totalIdHolders: locationGap.totalIdHolders,
+            totalEstimatedAdults: locationGap.totalEstimatedAdults,
+            totalEstimatedGap: locationGap.totalEstimatedGap
           }
         }
       };
     }
 
-    const [adultPop, registeredIds] = await Promise.all([
+    const [adultPop, registeredIds, locationGap] = await Promise.all([
       db.query<{ county_name: string; v: string }>(
         `SELECT county_name, sum(population)::text AS v
          FROM analytics.census2009_pop
@@ -127,7 +146,8 @@ export async function GET(req: NextRequest) {
          GROUP BY c.former_province, c.county_name
          ORDER BY sum(h.total) DESC`,
         [hasScope, countyCodes]
-      )
+      ),
+      locationIdGapEstimate2009(threshold, hasScope, countyCodes)
     ]);
 
     return {
@@ -144,6 +164,13 @@ export async function GET(req: NextRequest) {
             idHolders: Number(r.v)
           })),
           total: registeredIds.rows.reduce((s, r) => s + Number(r.v), 0)
+        },
+        locationGapTable: {
+          data: locationGap.rows,
+          totalPopulation: locationGap.totalPopulation,
+          totalIdHolders: locationGap.totalIdHolders,
+          totalEstimatedAdults: locationGap.totalEstimatedAdults,
+          totalEstimatedGap: locationGap.totalEstimatedGap
         }
       }
     };

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Image from "next/image";
 
 export function PageShell({
   nav,
@@ -40,15 +41,21 @@ export function PageShell({
               <p className="text-[11px] text-mute">
                 Sources: KNBS 2009 &amp; 2019 Census, national ID registry, IEBC registered-voter roll.
               </p>
-              <div className="text-xs font-medium text-mute sm:text-right">
-                Portal built by{" "}
+              <div className="flex items-center gap-2 text-xs font-medium text-mute sm:justify-end">
+                <span>Portal built by</span>
                 <a
                   href="https://pathwaystechnologies.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="font-semibold text-subink underline-offset-2 hover:text-icta-red hover:underline"
+                  className="inline-flex items-center rounded bg-icta-black px-2 py-1 transition-opacity hover:opacity-85"
                 >
-                  Pathways Technologies
+                  <Image
+                    src="/Pathways-Technologies-Logo-White-Header.png"
+                    alt="Pathways Technologies"
+                    width={180}
+                    height={55}
+                    className="h-4 w-auto"
+                  />
                 </a>
               </div>
             </div>

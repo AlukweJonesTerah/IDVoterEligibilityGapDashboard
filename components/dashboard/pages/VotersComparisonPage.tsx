@@ -84,7 +84,7 @@ export function VotersComparisonPage({ year }: { year: Year }) {
               { valueLabels: true }
             )}
             height={300}
-            mobileHeight={220}
+            mobileHeight={380}
           />
         </Widget>
 
@@ -97,7 +97,7 @@ export function VotersComparisonPage({ year }: { year: Year }) {
               { valueLabels: true }
             )}
             height={300}
-            mobileHeight={220}
+            mobileHeight={260}
             onEvents={{
               click: (p: { name?: string }) => {
                 if (!p.name) return;

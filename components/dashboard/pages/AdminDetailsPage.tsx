@@ -33,6 +33,17 @@ interface DetailRow2009 {
   province: string;
   idHolders: number;
 }
+interface LocationGapRow {
+  name: string;
+  county: string;
+  subcounty: string;
+  division: string;
+  population: number;
+  idHolders: number;
+  estimatedAdults: number;
+  estimatedGap: number;
+  ratioSource: "subcounty" | "county";
+}
 
 /** County rows collapse to reveal their sub-county children -- matches the source report's expandable 2019 pivot. Filterable by county or child name, paginated by county group. 2009's geography is flatter (no sub-county level, see FlatPivot below). */
 function GroupedPivot({ rows, countyLabel, rowLabel }: { rows: PivotRow2019[]; countyLabel: string; rowLabel: string }) {
@@ -246,7 +257,6 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
 
       <Widget title="Registered IDs By Administrative Units" help="Current national ID registry snapshot, no per-threshold or gender split. Use search to find a specific location.">
         {crumb ? <p className="mb-2 text-sm font-semibold text-subink">{crumb}</p> : null}
-        <p className="mb-3 text-[11px] italic text-icta-red">To drill this further we need age at the ward level.</p>
         {year === "2019" ? (
           <PivotTable
             rowLabel="Location"
@@ -271,6 +281,66 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
           />
         )}
       </Widget>
+
+      {(() => {
+        const gapRows = widgets.locationGapTable.data as LocationGapRow[];
+        const gapTotals = widgets.locationGapTable as unknown as {
+          totalPopulation: number;
+          totalIdHolders: number;
+          totalEstimatedAdults: number;
+          totalEstimatedGap: number;
+        };
+        const ratioNote =
+          year === "2019"
+            ? "adults are apportioned using this location's own sub-county adult rate where its name matches the census; otherwise its county's rate (marked †)"
+            : "adults are apportioned using this location's county-wide adult rate -- 2009 has no exact age breakdown below county";
+        return (
+          <Widget
+            title={`Estimated Adult ID Gap by Location (${threshold}+)`}
+            help={`Goes deeper than the source report, which stops at exact ID-holder counts per location with no adult-population comparison. Estimated adults = this location's known total population × an adult-share rate (${ratioNote}). Registered National IDs here is exact, from the same current registry snapshot as this location's population figure -- but that snapshot is a different, sparser extraction than the one totaled above, so these two tables' grand totals won't match. Treat this table as a shape/pattern, not a precise count.`}
+          >
+            {crumb ? <p className="mb-2 text-sm font-semibold text-subink">{crumb}</p> : null}
+            <p className="mb-3 text-[11px] italic text-icta-red">
+              Estimated figures (apportioned from known population, not a census age count). {year === "2019" ? "† = county-level fallback rate." : null}
+            </p>
+            <PivotTable
+              rowLabel="Location"
+              rows={gapRows}
+              totalRow={{
+                name: "Total",
+                county: "",
+                subcounty: "",
+                division: "",
+                population: gapTotals.totalPopulation,
+                idHolders: gapTotals.totalIdHolders,
+                estimatedAdults: gapTotals.totalEstimatedAdults,
+                estimatedGap: gapTotals.totalEstimatedGap,
+                ratioSource: "county"
+              }}
+              columns={[
+                { key: "county", label: "County", render: (r) => r.county },
+                { key: "subcounty", label: "Sub-county", render: (r) => r.subcounty },
+                { key: "division", label: "Division", render: (r) => r.division },
+                { key: "population", label: "Population", align: "right", render: (r) => fmt(r.population) },
+                {
+                  key: "estimatedAdults",
+                  label: "Est. Adults",
+                  align: "right",
+                  render: (r) => `${fmt(r.estimatedAdults)}${year === "2019" && r.ratioSource === "county" ? " †" : ""}`
+                },
+                { key: "idHolders", label: "Registered National IDs", align: "right", render: (r) => fmt(r.idHolders) },
+                {
+                  key: "estimatedGap",
+                  label: "Est. Population Without ID",
+                  align: "right",
+                  render: (r) => fmt(r.estimatedGap),
+                  bar: (r) => r.estimatedGap
+                }
+              ]}
+            />
+          </Widget>
+        );
+      })()}
     </div>
   );
 }

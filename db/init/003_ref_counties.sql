@@ -77,6 +77,10 @@ CREATE TABLE IF NOT EXISTS ref.county_aliases (
 INSERT INTO ref.county_aliases (alias, county_code) VALUES
   ('TAITA TAVETA', 6),
   ('THARAKA NITHI', 13),
+  -- KNBS's own 2009->county reconciliation (Volume 1B Table 1a/2a) reports
+  -- Tharaka-Nithi as a standalone "THARAKA" row with no separate Nithi row,
+  -- i.e. it already represents the full modern county under that name.
+  ('THARAKA', 13),
   ('MURANGA', 21),
   ('MURANG''A', 21),
   ('ELGEYO MARAKWET', 28),

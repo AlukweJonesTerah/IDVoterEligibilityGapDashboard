@@ -96,6 +96,14 @@ export function rankedBarOption(
   color: string,
   opts: { pct?: boolean; valueLabels?: boolean } = {}
 ): Record<string, unknown> {
+  // 170px was a flat default sized for long county/location names, but this
+  // function is also used for short labels (single/double-digit ages, age
+  // bands like "11-20") -- on a narrow mobile chart that fixed width ate
+  // over a third of the plot for a 2-character label, squeezing bars and
+  // their value labels into overlapping each other. Size it to content.
+  const longestName = Math.max(0, ...names.map((n) => n.length));
+  const yAxisLabelWidth = Math.min(170, Math.max(24, longestName * 6.5 + 10));
+  const maxValue = Math.max(1, ...values);
   return {
     ...rankedBarMotion,
     grid: barGrid,
@@ -103,6 +111,9 @@ export function rankedBarOption(
     xAxis: {
       type: "value",
       ...axisStyle,
+      // Headroom so a value label to the right of the longest bar has
+      // somewhere to render instead of colliding with the axis edge.
+      ...(opts.valueLabels ? { max: Math.ceil(maxValue * (opts.pct ? 1.12 : 1.18)) } : {}),
       ...(opts.pct ? { axisLabel: { ...axisStyle.axisLabel, formatter: "{value}%" } } : {})
     },
     yAxis: {
@@ -110,7 +121,7 @@ export function rankedBarOption(
       inverse: true,
       data: names,
       ...axisStyle,
-      axisLabel: { ...axisStyle.axisLabel, width: 170, overflow: "truncate" },
+      axisLabel: { ...axisStyle.axisLabel, width: yAxisLabelWidth, overflow: "truncate" },
       triggerEvent: true
     },
     series: [

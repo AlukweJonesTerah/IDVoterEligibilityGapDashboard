@@ -226,14 +226,13 @@ export function FilterBar({ year }: { year: Year }) {
           </>
         )}
 
-        {active ? (
-          <button
-            onClick={clear}
-            className="rounded border border-hair bg-paper px-2 py-1.5 text-xs font-medium text-icta-blue hover:bg-icta-blueSoft"
-          >
-            Clear filters
-          </button>
-        ) : null}
+        <button
+          onClick={clear}
+          disabled={!active}
+          className="rounded border border-hair bg-paper px-2 py-1.5 text-xs font-medium text-icta-blue hover:bg-icta-blueSoft disabled:cursor-not-allowed disabled:text-mute disabled:opacity-50 disabled:hover:bg-paper"
+        >
+          Reset filters
+        </button>
       </div>
     </div>
   );

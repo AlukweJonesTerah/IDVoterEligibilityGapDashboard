@@ -28,9 +28,13 @@ const files = [
   "db/init/010_raw_census_population.sql",
   "db/init/011_raw_id_eligibility.sql",
   "db/init/012_raw_admin_dimensions.sql",
+  "db/init/013_raw_population_housing_2019.sql",
+  "db/init/014_raw_census2009_volume1b.sql",
   "db/init/020_ref_geo_views.sql",
   "db/init/030_staging_reconciliation.sql",
-  "db/init/040_analytics_eligibility_views.sql"
+  "db/init/040_analytics_eligibility_views.sql",
+  "db/init/041_analytics_population_housing_views.sql",
+  "db/init/042_analytics_census2009_volume1b_views.sql"
 ];
 
 for (const f of files) {

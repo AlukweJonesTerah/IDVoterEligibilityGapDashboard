@@ -32,7 +32,14 @@ const TABLES = [
   ["raw.kenya_county_codes", "kenya_county_codes.csv"],
   ["raw.subcounty_codes", "subcounty_codes.csv"],
   ["raw.district_county_mapping", "district_county_mapping.csv"],
-  ["raw.constituencies", "constituencies.csv"]
+  ["raw.constituencies", "constituencies.csv"],
+  ["raw.population_housing_county_2019", "population_housing_county_2019.csv"],
+  ["raw.population_housing_subcounty_2019", "population_housing_subcounty_2019.csv"],
+  ["raw.population_housing_subloc_2019", "population_housing_subloc_2019.csv"],
+  ["raw.urban_centers_2019", "urban_centers_2019.csv"],
+  ["raw.population_housing_county_2009", "population_housing_county_2009.csv"],
+  ["raw.population_housing_constituency_2009", "population_housing_constituency_2009.csv"],
+  ["raw.census2009_age_sex_county", "census2009_age_sex_county.csv"]
 ];
 
 function toCell(v) {

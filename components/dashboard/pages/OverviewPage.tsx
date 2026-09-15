@@ -66,7 +66,7 @@ export function OverviewPage({ year }: { year: Year }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Kpi
           label="Projected adults, 2026"
           value={fmtCompact(headline.adultPopulation2026)}
@@ -80,19 +80,15 @@ export function OverviewPage({ year }: { year: Year }) {
           sub="Projected adults without an ID"
           help="Projected 2026 adult population minus current ID holders, floored at zero."
         />
-        <Kpi label="Registered voters" value={fmtCompact(headline.registeredVoters)} sub={fmt(headline.registeredVoters)} />
-        <Kpi
-          label="Voter registration gap"
-          value={fmtCompact(headline.voterGap)}
-          sub="Projected adults not registered"
-          help="Projected 2026 adult population minus current registered voters, floored at zero."
-        />
       </div>
+
+      {/* Registered-voter figures live on their own page (Registered Voters),
+          not duplicated here as KPIs -- see VotersComparisonPage. */}
 
       {headline.countyLevelOnly ? (
         <p className="text-[11px] text-mute">
-          ID and voter-registration figures are current, county-level snapshots with no historical district
-          breakdown, so the province/district filter above does not narrow them.
+          ID figures are a current, county-level snapshot with no historical district breakdown, so the
+          province/district filter above does not narrow them.
         </p>
       ) : null}
 

@@ -98,7 +98,7 @@ export function OverviewPage({ year }: { year: Year }) {
         {contextLabel}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Widget title="Population by age band" help="Click a bar to filter the whole page to that age band; click it again to clear.">
           <EChart
             option={rankedBarOption(

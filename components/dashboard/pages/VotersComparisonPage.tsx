@@ -74,7 +74,7 @@ export function VotersComparisonPage({ year }: { year: Year }) {
 
       <FilterBar year={year} />
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Widget title="Age-specific population distribution">
           <EChart
             option={rankedBarOption(

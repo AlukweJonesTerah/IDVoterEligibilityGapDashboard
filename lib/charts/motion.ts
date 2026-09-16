@@ -47,6 +47,8 @@ export const axisStyle = {
 // names and the last x-axis tick never clip (QA 7.1).
 export const barGrid = { left: 8, right: 24, top: 12, bottom: 8, containLabel: true };
 
+const compactNf = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 3 });
+
 // Donuts use a legend below the chart instead of external labels with leader
 // lines, which clipped at card edges (QA 7.1/7.3). Tooltip carries the detail.
 export function donutOption(
@@ -114,7 +116,10 @@ export function rankedBarOption(
       // Headroom so a value label to the right of the longest bar has
       // somewhere to render instead of colliding with the axis edge.
       ...(opts.valueLabels ? { max: Math.ceil(maxValue * (opts.pct ? 1.12 : 1.18)) } : {}),
-      ...(opts.pct ? { axisLabel: { ...axisStyle.axisLabel, formatter: "{value}%" } } : {})
+      // Full numbers ("300,000", "1,200,000", ...) run together with no gap
+      // on a narrow mobile chart; compact notation ("300K", "1.2M") keeps
+      // every tick legible at any width.
+      axisLabel: { ...axisStyle.axisLabel, formatter: opts.pct ? "{value}%" : (v: number) => compactNf.format(v) }
     },
     yAxis: {
       type: "category",
@@ -191,8 +196,6 @@ export function treemapOption(rows: { name: string; value: number }[], colors: s
     ]
   };
 }
-
-const compactNf = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 3 });
 
 /**
  * Two/three-block treemap sized by value with large stat-card labels (name

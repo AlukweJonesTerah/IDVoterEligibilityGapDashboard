@@ -80,7 +80,7 @@ export function PivotTable<Row extends { name: string }>({
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-hair text-mute">
-              <th className="py-1.5 pr-3 font-medium">{rowLabel}</th>
+              <th className="sticky left-0 z-10 border-r border-hair bg-paperalt py-1.5 pr-3 font-medium">{rowLabel}</th>
               {columns.map((c) => (
                 <th key={c.key} className={`py-1.5 pr-3 font-medium ${c.align === "right" ? "text-right" : "text-left"}`}>
                   {c.label}
@@ -91,7 +91,7 @@ export function PivotTable<Row extends { name: string }>({
           <tbody className="tnum">
             {pageRows.map((row) => (
               <tr key={row.name} className="border-b border-hair last:border-0">
-                <td className="py-1.5 pr-3 text-ink">{row.name}</td>
+                <td className="sticky left-0 z-10 border-r border-hair bg-paperalt py-1.5 pr-3 text-ink">{row.name}</td>
                 {columns.map((c) => (
                   <td key={c.key} className={`py-1.5 pr-3 text-subink ${c.align === "right" ? "text-right" : "text-left"}`}>
                     {cell(row, c)}
@@ -108,7 +108,7 @@ export function PivotTable<Row extends { name: string }>({
             ) : null}
             {totalRow ? (
               <tr className="border-t-2 border-hair font-semibold text-ink">
-                <td className="py-1.5 pr-3">{totalRow.name}</td>
+                <td className="sticky left-0 z-10 border-r border-hair bg-paperalt py-1.5 pr-3">{totalRow.name}</td>
                 {columns.map((c) => (
                   <td key={c.key} className={`py-1.5 pr-3 ${c.align === "right" ? "text-right" : "text-left"}`}>
                     {c.render(totalRow)}

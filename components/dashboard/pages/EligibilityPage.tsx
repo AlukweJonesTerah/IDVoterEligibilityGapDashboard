@@ -63,7 +63,7 @@ export function EligibilityPage({ year, threshold }: { year: Year; threshold: nu
 
       <FilterBar year={year} />
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Widget
           title="Age-specific population distribution"
           help={`Bars from age ${threshold} onward (shaded) are the population projected to be adults by 2026.`}

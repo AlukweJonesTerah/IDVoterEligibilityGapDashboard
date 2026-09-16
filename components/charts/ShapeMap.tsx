@@ -64,13 +64,32 @@ export function ShapeMap({
     );
   }
 
-  const max = Math.max(1, ...data.map((d) => d.value));
+  // Population-style data is heavily right-skewed (e.g. Nairobi vs. the rest
+  // of Kenya's counties), so a linear color scale leaves almost every region
+  // in the palest 10% of the range and the map reads as flat/colorless. Color
+  // by a log-compressed value instead while keeping the real number (index 0)
+  // for the tooltip -- map series support multi-dimension values, and
+  // visualMap.dimension picks which one drives the color.
+  //
+  // The visualMap range is anchored to the data's own min/max, not a fixed
+  // 0 floor: real values here never get close to 0, so a 0 floor would still
+  // cram every region into the top slice of the ramp after the log compresses
+  // everything -- same "looks flat" problem one step removed.
+  const values = data.map((d) => Math.max(0, d.value));
+  const colorMin = Math.log1p(values.length ? Math.min(...values) : 0);
+  const colorMax = Math.max(colorMin + 0.001, Math.log1p(values.length ? Math.max(...values) : 1));
+  const mapData = data.map((d) => ({
+    name: d.name,
+    value: [d.value, Math.log1p(Math.max(0, d.value))],
+    extra: d.extra
+  }));
   const option = {
     ...chartMotion,
     tooltip: {
       trigger: "item",
-      formatter: (p: { name: string; value: number | undefined; data?: RegionDatum }) => {
-        const lines = [`<b>${p.name}</b>`, `${label}: ${Number.isFinite(p.value) ? Number(p.value).toLocaleString() : "—"}`];
+      formatter: (p: { name: string; value: number[] | number | undefined; data?: RegionDatum }) => {
+        const raw = Array.isArray(p.value) ? p.value[0] : p.value;
+        const lines = [`<b>${p.name}</b>`, `${label}: ${Number.isFinite(raw) ? Number(raw).toLocaleString() : "—"}`];
         const extra = p.data?.extra;
         if (extra) {
           for (const [k, v] of Object.entries(extra)) lines.push(`${k}: ${v ?? "—"}`);
@@ -79,8 +98,9 @@ export function ShapeMap({
       }
     },
     visualMap: {
-      min: 0,
-      max,
+      min: colorMin,
+      max: colorMax,
+      dimension: 1,
       left: 0,
       bottom: 0,
       orient: "horizontal",
@@ -88,7 +108,10 @@ export function ShapeMap({
       itemHeight: 70,
       text: ["High", "Low"],
       textStyle: { color: "#6B7787", fontSize: 11 },
-      inRange: { color: ["#E4F0F8", "#5B9BD5", "#1667A8"] }
+      // Wider, more saturated ramp than the old 3-stop pale-blue-to-medium-blue
+      // one -- more stops and a much darker top end make concentration visible
+      // even after compression.
+      inRange: { color: ["#EAF3FB", "#9DC9EA", "#4A93CB", "#155D96", "#062C49"] }
     },
     toolbox: {
       right: 4,
@@ -118,8 +141,8 @@ export function ShapeMap({
         emphasis: { label: { show: true, fontSize: 10 }, itemStyle: { areaColor: "#0E4E82" } },
         itemStyle: { borderColor: "#FFFFFF", borderWidth: 0.6 },
         data: selectedName
-          ? data.map((d) => (d.name === selectedName ? { ...d, itemStyle: { borderColor: "#0E1722", borderWidth: 2.5 } } : d))
-          : data
+          ? mapData.map((d) => (d.name === selectedName ? { ...d, itemStyle: { borderColor: "#0E1722", borderWidth: 2.5 } } : d))
+          : mapData
       }
     ]
   };

@@ -4,10 +4,11 @@ import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { useFilters } from "@/components/dashboard/FilterContext";
 import { Widget } from "@/components/dashboard/Widget";
-import { EChart } from "@/components/charts/EChart";
 import { ShapeMap } from "@/components/charts/ShapeMap";
 import { DrillExplorer } from "@/components/dashboard/DrillExplorer";
-import { rankedBarOption, statTreemapOption, genderColors, reportBlue } from "@/lib/charts/motion";
+import { LeaderboardBars } from "@/components/dashboard/LeaderboardBars";
+import { SplitBar } from "@/components/dashboard/SplitBar";
+import { genderColors, reportBlue } from "@/lib/charts/motion";
 import { fmt } from "@/lib/format";
 import type { Year } from "@/lib/years";
 
@@ -69,37 +70,23 @@ export function OverviewPage({ year }: { year: Year }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Widget title="Population by age band" help="Click a bar to filter the whole page to that age band; click it again to clear.">
-          <EChart
-            option={rankedBarOption(
-              ageBand.map((r) => r.name),
-              ageBand.map((r) => r.value),
-              reportBlue,
-              { valueLabels: true }
-            )}
-            height={320}
-            mobileHeight={240}
-            onEvents={{
-              click: (p: { name?: string }) => {
-                if (!p.name) return;
-                setFilters({ ageBand: filters.ageBand === p.name ? null : p.name });
-              }
-            }}
+        <Widget title="Population by age band" help="Click a row to filter the whole page to that age band; click it again to clear.">
+          <LeaderboardBars
+            rows={ageBand}
+            color={reportBlue}
+            activeName={filters.ageBand}
+            onRowClick={(name) => setFilters({ ageBand: filters.ageBand === name ? null : name })}
           />
         </Widget>
 
-        <Widget title="Population by gender" help="Click a block to filter the whole page to that gender; click it again to clear.">
-          <EChart
-            option={statTreemapOption(gender, genderColors[year])}
-            height={320}
-            mobileHeight={220}
-            onEvents={{
-              click: (p: { name?: string }) => {
-                if (!p.name) return;
-                const clicked = p.name.toLowerCase() === "male" ? "male" : p.name.toLowerCase() === "female" ? "female" : null;
-                if (!clicked) return;
-                setFilters({ gender: filters.gender === clicked ? "both" : clicked });
-              }
+        <Widget title="Population by gender" help="Click a segment to filter the whole page to that gender; click it again to clear.">
+          <SplitBar
+            rows={gender}
+            colors={genderColors[year]}
+            activeName={filters.gender === "both" ? null : filters.gender === "male" ? "Male" : "Female"}
+            onSegmentClick={(name) => {
+              const clicked = name.toLowerCase() === "male" ? "male" : "female";
+              setFilters({ gender: filters.gender === clicked ? "both" : clicked });
             }}
           />
         </Widget>

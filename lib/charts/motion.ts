@@ -8,12 +8,6 @@ export const chartMotion = {
   animationThreshold: 2000
 } as const;
 
-export const rankedBarMotion = {
-  ...chartMotion,
-  animationDelay: (idx: number) => idx * 18,
-  animationDelayUpdate: (idx: number) => idx * 8
-};
-
 // Data marks are shades of ICTA green (validated single-hue ramp: monotone
 // lightness, adjacent steps distinguishable); brand red stays in chrome and
 // alerts only, gray is the de-emphasis neutral. Donut order alternates
@@ -46,8 +40,6 @@ export const axisStyle = {
 // containLabel keeps axis labels inside the canvas so long county/course
 // names and the last x-axis tick never clip (QA 7.1).
 export const barGrid = { left: 8, right: 24, top: 12, bottom: 8, containLabel: true };
-
-const compactNf = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 0 });
 
 // Donuts use a legend below the chart instead of external labels with leader
 // lines, which clipped at card edges (QA 7.1/7.3). Tooltip carries the detail.
@@ -91,68 +83,6 @@ export function donutOption(
   };
 }
 
-/** Horizontal ranked bar with safe margins and truncated names + full-name tooltips. */
-export function rankedBarOption(
-  names: string[],
-  values: number[],
-  color: string,
-  opts: { pct?: boolean; valueLabels?: boolean } = {}
-): Record<string, unknown> {
-  // 170px was a flat default sized for long county/location names, but this
-  // function is also used for short labels (single/double-digit ages, age
-  // bands like "11-20") -- on a narrow mobile chart that fixed width ate
-  // over a third of the plot for a 2-character label, squeezing bars and
-  // their value labels into overlapping each other. Size it to content.
-  const longestName = Math.max(0, ...names.map((n) => n.length));
-  const yAxisLabelWidth = Math.min(170, Math.max(24, longestName * 6.5 + 10));
-  const maxValue = Math.max(1, ...values);
-  return {
-    ...rankedBarMotion,
-    grid: { ...barGrid, bottom: 4 },
-    tooltip: { trigger: "axis", ...(opts.pct ? { valueFormatter: (v: number) => `${v}%` } : {}) },
-    xAxis: {
-      type: "value",
-      // Cleaner, leaderboard-style look: no axis line, ticks, gridlines, or
-      // value labels along the bottom -- the value labels on the bars
-      // themselves (below) already carry the numbers.
-      show: false,
-      // Headroom so a value label to the right of the longest bar has
-      // somewhere to render instead of colliding with the axis edge.
-      ...(opts.valueLabels ? { max: Math.ceil(maxValue * (opts.pct ? 1.12 : 1.18)) } : {})
-    },
-    yAxis: {
-      type: "category",
-      inverse: true,
-      data: names,
-      axisLabel: { ...axisStyle.axisLabel, width: yAxisLabelWidth, overflow: "truncate" },
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: false },
-      triggerEvent: true
-    },
-    series: [
-      {
-        type: "bar",
-        barWidth: 12,
-        itemStyle: { color, borderRadius: [0, 2, 2, 0] },
-        ...(opts.valueLabels
-          ? {
-              label: {
-                show: true,
-                position: "right",
-                color: "#3A4856",
-                fontSize: 11,
-                formatter: ({ value }: { value: number }) =>
-                  opts.pct ? `${value}%` : new Intl.NumberFormat("en-US").format(value)
-              }
-            }
-          : {}),
-        data: values
-      }
-    ]
-  };
-}
-
 /** Vertical bar over a sequential category axis (e.g. population by single-year age). */
 export function ageBarOption(ages: number[], values: number[], color: string, threshold?: number): Record<string, unknown> {
   return {
@@ -190,43 +120,6 @@ export function treemapOption(rows: { name: string; value: number }[], colors: s
         nodeClick: false,
         breadcrumb: { show: false },
         label: { show: true, color: "#FFFFFF", fontSize: 12, fontWeight: 600 },
-        upperLabel: { show: false },
-        itemStyle: { borderColor: "#FFFFFF", borderWidth: 2, gapWidth: 2 },
-        data: rows
-      }
-    ]
-  };
-}
-
-/**
- * Two/three-block treemap sized by value with large stat-card labels (name
- * top-left, big value bottom-left) instead of a centered plain label --
- * matches the source report's gender-split panel.
- */
-export function statTreemapOption(rows: { name: string; value: number }[], colors: string[]): Record<string, unknown> {
-  return {
-    ...chartMotion,
-    color: colors,
-    tooltip: {
-      formatter: (p: { name: string; value: number }) => `${p.name}: ${new Intl.NumberFormat("en-US").format(p.value)}`
-    },
-    series: [
-      {
-        type: "treemap",
-        roam: false,
-        nodeClick: false,
-        breadcrumb: { show: false },
-        label: {
-          show: true,
-          position: ["50%", "50%"],
-          align: "center",
-          verticalAlign: "middle",
-          formatter: (p: { name: string; value: number }) => `{name|${p.name}}\n{value|${compactNf.format(p.value)}}`,
-          rich: {
-            name: { color: "#FFFFFF", fontSize: 12, fontWeight: 600, lineHeight: 18, align: "center" },
-            value: { color: "#FFFFFF", fontSize: 22, fontWeight: 700, lineHeight: 28, align: "center" }
-          }
-        },
         upperLabel: { show: false },
         itemStyle: { borderColor: "#FFFFFF", borderWidth: 2, gapWidth: 2 },
         data: rows

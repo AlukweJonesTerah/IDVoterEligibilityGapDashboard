@@ -4,10 +4,10 @@ import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { useFilters } from "@/components/dashboard/FilterContext";
 import { Widget } from "@/components/dashboard/Widget";
-import { EChart } from "@/components/charts/EChart";
 import { ShapeMap } from "@/components/charts/ShapeMap";
 import { PivotTable } from "@/components/dashboard/PivotTable";
-import { rankedBarOption, reportBlue } from "@/lib/charts/motion";
+import { LeaderboardBars } from "@/components/dashboard/LeaderboardBars";
+import { reportBlue } from "@/lib/charts/motion";
 import { fmt } from "@/lib/format";
 import type { Year } from "@/lib/years";
 
@@ -76,34 +76,15 @@ export function VotersComparisonPage({ year }: { year: Year }) {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Widget title="Age-specific population distribution">
-          <EChart
-            option={rankedBarOption(
-              byAge.map((r) => String(r.age)),
-              byAge.map((r) => r.value),
-              reportBlue,
-              { valueLabels: true }
-            )}
-            height={300}
-            mobileHeight={380}
-          />
+          <LeaderboardBars rows={byAge.map((r) => ({ name: String(r.age), value: r.value }))} color={reportBlue} />
         </Widget>
 
-        <Widget title="Eligible adult population by age group" help="Click a bar to filter the whole page to that age band; click it again to clear.">
-          <EChart
-            option={rankedBarOption(
-              byBand.map((r) => r.name),
-              byBand.map((r) => r.value),
-              reportBlue,
-              { valueLabels: true }
-            )}
-            height={300}
-            mobileHeight={260}
-            onEvents={{
-              click: (p: { name?: string }) => {
-                if (!p.name) return;
-                setFilters({ ageBand: filters.ageBand === p.name ? null : p.name });
-              }
-            }}
+        <Widget title="Eligible adult population by age group" help="Click a row to filter the whole page to that age band; click it again to clear.">
+          <LeaderboardBars
+            rows={byBand}
+            color={reportBlue}
+            activeName={filters.ageBand}
+            onRowClick={(name) => setFilters({ ageBand: filters.ageBand === name ? null : name })}
           />
         </Widget>
       </div>

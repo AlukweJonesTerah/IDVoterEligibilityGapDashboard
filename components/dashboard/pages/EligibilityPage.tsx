@@ -26,8 +26,12 @@ export function EligibilityPage({ year, threshold }: { year: Year; threshold: nu
 
   // Ranked by population, not sequential by age -- matches the source
   // report, and surfaces age-heaping (census respondents rounding their
-  // stated age) that a sequential axis would bury.
+  // stated age) that a sequential axis would bury. Filtered to this page's
+  // own threshold and up: below-threshold ages aren't part of the adult
+  // cohort this page is about, so they shouldn't appear (e.g. no age 10 on
+  // the 11+ page).
   const byAge = [...(widgets.ageSpecificDistribution.data as { age: number; value: number }[])]
+    .filter((r) => r.age >= threshold)
     .sort((a, b) => b.value - a.value)
     .slice(0, 20);
   const byBand = widgets.eligibleAdultsByAgeGroup.data as { name: string; value: number }[];
@@ -43,7 +47,7 @@ export function EligibilityPage({ year, threshold }: { year: Year; threshold: nu
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-hair pb-4">
         <h2 className="text-lg font-bold text-ink sm:text-xl">
-          Adult ID Coverage Gap ({threshold}+ in year {year})
+          Adult ID Coverage Gap ({threshold}+ in {year}, 18+ by 2026)
         </h2>
         <div className="grid w-full grid-cols-3 gap-3 sm:w-auto sm:flex sm:flex-wrap sm:gap-6">
           <div className="text-left sm:text-right">
@@ -101,7 +105,7 @@ export function EligibilityPage({ year, threshold }: { year: Year; threshold: nu
       </div>
 
       <Widget
-        title="Adult population without IDs, by county"
+        title={`Adult population without IDs, by county${year === "2019" && filters.county ? ` (${filters.county} selected)` : ""}`}
         help="Click a county to filter the whole page to it; click it again to clear. ID-holder coverage in the source registry varies sharply by county -- some urban/informal-settlement areas (e.g. parts of Nairobi) show very low counts, which likely reflects incomplete administrative records for those locations rather than genuinely near-zero ID possession. Read large gaps in low-coverage counties with that caveat."
       >
         <ShapeMap

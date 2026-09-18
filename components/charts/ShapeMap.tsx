@@ -111,7 +111,13 @@ export function ShapeMap({
       // Wider, more saturated ramp than the old 3-stop pale-blue-to-medium-blue
       // one -- more stops and a much darker top end make concentration visible
       // even after compression.
-      inRange: { color: ["#EAF3FB", "#9DC9EA", "#4A93CB", "#155D96", "#062C49"] }
+      inRange: { color: ["#EAF3FB", "#9DC9EA", "#4A93CB", "#155D96", "#062C49"] },
+      // Regions pushed below `min` (see the selectedName branch below) render
+      // with this flat grey instead of the ramp -- how non-selected counties
+      // get greyed out. A plain itemStyle.areaColor on the data item is not
+      // enough on a `map` series: visualMap's computed color still wins over
+      // it, so out-of-range is the mechanism that actually overrides it.
+      outOfRange: { color: ["#E4E7EC"] }
     },
     toolbox: {
       right: 4,
@@ -141,7 +147,19 @@ export function ShapeMap({
         emphasis: { label: { show: true, fontSize: 10 }, itemStyle: { areaColor: "#0E4E82" } },
         itemStyle: { borderColor: "#FFFFFF", borderWidth: 0.6 },
         data: selectedName
-          ? mapData.map((d) => (d.name === selectedName ? { ...d, itemStyle: { borderColor: "#0E1722", borderWidth: 2.5 } } : d))
+          ? mapData.map((d) =>
+              d.name === selectedName
+                ? { ...d, itemStyle: { borderColor: "#0E1722", borderWidth: 2.5 } }
+                : {
+                    ...d,
+                    // Push the color-driving dimension below visualMap's
+                    // `min` so this region falls into `outOfRange` (flat
+                    // grey) instead of the normal ramp -- the raw value in
+                    // value[0] is untouched, so the tooltip still shows the
+                    // real number.
+                    value: [d.value[0], colorMin - 1]
+                  }
+            )
           : mapData
       }
     ]

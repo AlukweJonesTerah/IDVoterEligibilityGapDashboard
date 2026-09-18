@@ -210,7 +210,7 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-hair pb-4">
         <h2 className="text-lg font-bold text-ink sm:text-xl">
-          Adult ID Coverage Gap ({threshold}+ in year {year})
+          Adult ID Coverage Gap ({threshold}+ in {year}, 18+ by 2026)
         </h2>
         <div className="grid w-full grid-cols-3 gap-3 sm:w-auto sm:flex sm:flex-wrap sm:gap-6">
           <div className="text-left sm:text-right">

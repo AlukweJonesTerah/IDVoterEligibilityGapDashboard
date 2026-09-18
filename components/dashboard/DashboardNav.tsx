@@ -23,9 +23,9 @@ function hrefFor(year: Year, family: (typeof FAMILIES)[number]["key"], threshold
   return `/${year}/${family}/${threshold}`;
 }
 
-// All four threshold+year combos together (matching the source report's own
-// flat tab strip: "0+", "1+", "10+", "11+" are all reachable at once, not
-// hidden behind a separate year switch) -- picking one also switches year.
+// All four threshold+year combos; filtered down to the current year's pair
+// when rendered ("0+"/"1+" for 2009, "10+"/"11+" for 2019) so the strip only
+// ever shows thresholds that apply to the census currently on screen.
 const ALL_THRESHOLDS: { year: Year; threshold: string; label: string }[] = [
   { year: "2009", threshold: "0", label: "0+" },
   { year: "2009", threshold: "1", label: "1+" },
@@ -67,11 +67,11 @@ export function DashboardNav({ year }: { year: Year }) {
 
         {showThreshold ? (
           <div className="flex items-center gap-1 rounded border border-hair bg-paperalt p-0.5">
-            {ALL_THRESHOLDS.map((t) => (
+            {ALL_THRESHOLDS.filter((t) => t.year === year).map((t) => (
               <Link
                 key={`${t.year}-${t.threshold}`}
                 href={hrefFor(t.year, family, t.threshold)}
-                className={tabClass(t.year === year && t.threshold === threshold)}
+                className={tabClass(t.threshold === threshold)}
                 title={`${t.label} (${t.year} census)`}
               >
                 {t.label}

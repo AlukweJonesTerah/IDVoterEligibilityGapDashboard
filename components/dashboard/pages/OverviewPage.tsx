@@ -3,13 +3,12 @@
 import { useDashboardData, LoadingBlock } from "@/lib/useDashboardData";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { useFilters } from "@/components/dashboard/FilterContext";
-import { Widget, Kpi } from "@/components/dashboard/Widget";
+import { Widget } from "@/components/dashboard/Widget";
 import { EChart } from "@/components/charts/EChart";
 import { ShapeMap } from "@/components/charts/ShapeMap";
 import { DrillExplorer } from "@/components/dashboard/DrillExplorer";
-import { PivotTable } from "@/components/dashboard/PivotTable";
 import { rankedBarOption, statTreemapOption, genderColors, reportBlue } from "@/lib/charts/motion";
-import { fmt, fmtCompact } from "@/lib/format";
+import { fmt } from "@/lib/format";
 import type { Year } from "@/lib/years";
 
 interface AgeBandRow {
@@ -24,11 +23,13 @@ interface CountyRow {
   name: string;
   value: number;
 }
-interface TopAdminRow {
-  name: string;
-  county: string;
-  value: number;
-}
+
+const CENSUS_BLURB: Record<Year, string> = {
+  "2019":
+    "The 2019 Kenya Population and Housing Census counted every person present in the country on census night, recording age, sex, and location for the whole population down to sub-county level.",
+  "2009":
+    "The 2009 Kenya Population and Housing Census counted every person present in the country on census night, recording age, sex, and location for the whole population down to district level."
+};
 
 export function OverviewPage({ year }: { year: Year }) {
   const { widgets, error } = useDashboardData(`/api/overview?year=${year}`);
@@ -38,18 +39,11 @@ export function OverviewPage({ year }: { year: Year }) {
 
   const headline = widgets.headline.data as {
     totalPopulation: number;
-    adultPopulation2026: number;
-    adultThreshold: number;
-    idHolders: number;
-    idGap: number;
-    registeredVoters: number;
-    voterGap: number;
     countyLevelOnly?: boolean;
   };
   const ageBand = widgets.populationByAgeBand.data as AgeBandRow[];
   const gender = widgets.genderSplit.data as GenderRow[];
   const countyMap = widgets.countyMap.data as CountyRow[];
-  const topAdmin = widgets.topAdminUnits as { data: TopAdminRow[]; unitLabel: string; ageLabel: string; total: number };
 
   const contextLabel =
     year === "2019"
@@ -66,31 +60,7 @@ export function OverviewPage({ year }: { year: Year }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Kpi
-          label="Projected adults, 2026"
-          value={fmtCompact(headline.adultPopulation2026)}
-          sub={`Age ${headline.adultThreshold}+ in ${year}`}
-          help={`Population aged ${headline.adultThreshold} or older in the ${year} census, projected forward to when they turn 18 by 2026.`}
-        />
-        <Kpi label="Current ID holders" value={fmtCompact(headline.idHolders)} sub={fmt(headline.idHolders)} />
-        <Kpi
-          label="ID gap"
-          value={fmtCompact(headline.idGap)}
-          sub="Projected adults without an ID"
-          help="Projected 2026 adult population minus current ID holders, floored at zero."
-        />
-      </div>
-
-      {/* Registered-voter figures live on their own page (Registered Voters),
-          not duplicated here as KPIs -- see VotersComparisonPage. */}
-
-      {headline.countyLevelOnly ? (
-        <p className="text-[11px] text-mute">
-          ID figures are a current, county-level snapshot with no historical district breakdown, so the
-          province/district filter above does not narrow them.
-        </p>
-      ) : null}
+      <p className="text-sm text-subink">{CENSUS_BLURB[year]}</p>
 
       <FilterBar year={year} />
 
@@ -143,7 +113,7 @@ export function OverviewPage({ year }: { year: Year }) {
       </Widget>
 
       <Widget
-        title={`Geographic distribution of population by county${headline.countyLevelOnly ? " (reconciled from 2009 districts)" : ""}`}
+        title={`Geographic distribution of population by county${headline.countyLevelOnly ? " (reconciled from 2009 districts)" : ""}${year === "2019" && filters.county ? ` (${filters.county} selected)` : ""}`}
         help={year === "2019" ? "Click a county to filter the whole page to it; click it again to clear." : undefined}
       >
         <ShapeMap
@@ -157,18 +127,6 @@ export function OverviewPage({ year }: { year: Year }) {
           }
         />
         <p className="mt-2 text-[11px] text-mute">Population by sub-county: low &rarr; high</p>
-      </Widget>
-
-      <Widget title={`Top ${topAdmin.unitLabel.toLowerCase()}s by ${topAdmin.ageLabel.toLowerCase()}`}>
-        <PivotTable
-          rowLabel={topAdmin.unitLabel}
-          rows={topAdmin.data}
-          totalRow={{ name: "Total", county: "", value: topAdmin.total }}
-          columns={[
-            { key: "county", label: "County / Province", render: (r) => r.county },
-            { key: "value", label: topAdmin.ageLabel, align: "right", render: (r) => fmt(r.value), bar: (r) => r.value }
-          ]}
-        />
       </Widget>
     </div>
   );

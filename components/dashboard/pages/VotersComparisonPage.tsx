@@ -109,7 +109,7 @@ export function VotersComparisonPage({ year }: { year: Year }) {
       </div>
 
       <Widget
-        title="Population by Non Registered Voters (2026 Projection)"
+        title={`Population by Non Registered Voters (2026 Projection)${year === "2019" && filters.county ? ` (${filters.county} selected)` : ""}`}
         help="Click a county to filter the whole page to it; click it again to clear. Projected 2026 adult population minus currently registered voters, floored at zero."
       >
         <ShapeMap

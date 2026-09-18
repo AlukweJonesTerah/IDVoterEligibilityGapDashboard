@@ -47,7 +47,7 @@ export const axisStyle = {
 // names and the last x-axis tick never clip (QA 7.1).
 export const barGrid = { left: 8, right: 24, top: 12, bottom: 8, containLabel: true };
 
-const compactNf = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 3 });
+const compactNf = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 0 });
 
 // Donuts use a legend below the chart instead of external labels with leader
 // lines, which clipped at card edges (QA 7.1/7.3). Tooltip carries the detail.
@@ -108,25 +108,26 @@ export function rankedBarOption(
   const maxValue = Math.max(1, ...values);
   return {
     ...rankedBarMotion,
-    grid: barGrid,
+    grid: { ...barGrid, bottom: 4 },
     tooltip: { trigger: "axis", ...(opts.pct ? { valueFormatter: (v: number) => `${v}%` } : {}) },
     xAxis: {
       type: "value",
-      ...axisStyle,
+      // Cleaner, leaderboard-style look: no axis line, ticks, gridlines, or
+      // value labels along the bottom -- the value labels on the bars
+      // themselves (below) already carry the numbers.
+      show: false,
       // Headroom so a value label to the right of the longest bar has
       // somewhere to render instead of colliding with the axis edge.
-      ...(opts.valueLabels ? { max: Math.ceil(maxValue * (opts.pct ? 1.12 : 1.18)) } : {}),
-      // Full numbers ("300,000", "1,200,000", ...) run together with no gap
-      // on a narrow mobile chart; compact notation ("300K", "1.2M") keeps
-      // every tick legible at any width.
-      axisLabel: { ...axisStyle.axisLabel, formatter: opts.pct ? "{value}%" : (v: number) => compactNf.format(v) }
+      ...(opts.valueLabels ? { max: Math.ceil(maxValue * (opts.pct ? 1.12 : 1.18)) } : {})
     },
     yAxis: {
       type: "category",
       inverse: true,
       data: names,
-      ...axisStyle,
       axisLabel: { ...axisStyle.axisLabel, width: yAxisLabelWidth, overflow: "truncate" },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: false },
       triggerEvent: true
     },
     series: [

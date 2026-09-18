@@ -9,7 +9,7 @@ import { PivotTable } from "@/components/dashboard/PivotTable";
 import { LeaderboardBars } from "@/components/dashboard/LeaderboardBars";
 import { reportBlue } from "@/lib/charts/motion";
 import { fmt } from "@/lib/format";
-import type { Year } from "@/lib/years";
+import { ageByProjectionYear, type Year } from "@/lib/years";
 
 interface GapRow {
   name: string;
@@ -47,7 +47,7 @@ export function EligibilityPage({ year, threshold }: { year: Year; threshold: nu
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-hair pb-4">
         <h2 className="text-lg font-bold text-ink sm:text-xl">
-          Adult ID Coverage Gap ({threshold}+ in {year}, 18+ by 2026)
+          Adult ID Coverage Gap ({threshold}+ in {year}, {ageByProjectionYear(year, threshold)}+ by 2026)
         </h2>
         <div className="grid w-full grid-cols-3 gap-3 sm:w-auto sm:flex sm:flex-wrap sm:gap-6">
           <div className="text-left sm:text-right">
@@ -70,7 +70,7 @@ export function EligibilityPage({ year, threshold }: { year: Year; threshold: nu
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Widget
           title="Age-specific population distribution"
-          help={`Ranked by population, age ${threshold} and up. All ages shown are projected to be adults by 2026.`}
+          help={`Ranked by population, age ${threshold} and up. All ages shown will be ${ageByProjectionYear(year, threshold)}+ by 2026.`}
         >
           <LeaderboardBars rows={byAge.map((r) => ({ name: String(r.age), value: r.value }))} color={reportBlue} />
         </Widget>

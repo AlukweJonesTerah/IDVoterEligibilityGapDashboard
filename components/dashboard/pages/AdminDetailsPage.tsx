@@ -9,7 +9,7 @@ import { Widget } from "@/components/dashboard/Widget";
 import { PivotTable } from "@/components/dashboard/PivotTable";
 import { AdminDrillTree } from "@/components/dashboard/AdminDrillTree";
 import { fmt } from "@/lib/format";
-import type { Year } from "@/lib/years";
+import { ageByProjectionYear, type Year } from "@/lib/years";
 
 const GROUP_PAGE_SIZE = 10;
 
@@ -210,7 +210,7 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-hair pb-4">
         <h2 className="text-lg font-bold text-ink sm:text-xl">
-          Adult ID Coverage Gap ({threshold}+ in {year}, 18+ by 2026)
+          Adult ID Coverage Gap ({threshold}+ in {year}, {ageByProjectionYear(year, threshold)}+ by 2026)
         </h2>
         <div className="grid w-full grid-cols-3 gap-3 sm:w-auto sm:flex sm:flex-wrap sm:gap-6">
           <div className="text-left sm:text-right">
@@ -239,14 +239,14 @@ export function AdminDetailsPage({ year, threshold }: { year: Year; threshold: n
       {year === "2019" ? (
         <Widget
           title={`Adult population (${threshold}+) by county`}
-          help={`Projected ${year} population aged ${threshold} and above, i.e. adults by 2026. Click a county to expand its sub-county breakdown.`}
+          help={`Projected ${year} population aged ${threshold} and above, i.e. ${ageByProjectionYear(year, threshold)}+ by 2026. Click a county to expand its sub-county breakdown.`}
         >
           <GroupedPivot rows={widgets.adultPopulationPivot.data as PivotRow2019[]} countyLabel="County" rowLabel="Sub-county" />
         </Widget>
       ) : (
         <Widget
           title={`Adult population (${threshold}+) by county`}
-          help={`Projected ${year} population aged ${threshold} and above, i.e. adults by 2026, reconciled from 2009 districts to modern counties.`}
+          help={`Projected ${year} population aged ${threshold} and above, i.e. ${ageByProjectionYear(year, threshold)}+ by 2026, reconciled from 2009 districts to modern counties.`}
         >
           <PivotTable
             rowLabel="County"
